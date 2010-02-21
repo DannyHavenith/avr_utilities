@@ -63,7 +63,8 @@ struct pin_definition
 {
     static const PortPlaceholder    port = port_;
     static const uint8_t            bit  = bit_;
-    static const uint8_t            mask = 1 << bit;
+    static const uint8_t            mask = 1 << bit_;
+	static const uint8_t 			shift = bit_;
 };
 
 template< uint8_t bit_>
@@ -98,29 +99,16 @@ struct pin_cons_list
     typedef pin_cons_list< head_, tail_> as_cons_list;
 };
 
-/// a set of bits in one port
+/// a contiguous set of bits in one port
 template< PortPlaceholder port_, 
-            uint8_t bit0,
-            uint8_t bit1 = 255,
-            uint8_t bit2 = 255,
-            uint8_t bit3 = 255,
-            uint8_t bit4 = 255,
-            uint8_t bit5 = 255,
-            uint8_t bit6 = 255,
-            uint8_t bit7 = 255
+            uint8_t first_bit,
+			uint8_t bits
             >
 struct pin_group
 {
     static const uint8_t port = port_;
-    static const uint8_t mask = 
-            bit_to_mask< bit0>::value
-        |   bit_to_mask< bit1>::value
-        |   bit_to_mask< bit2>::value
-        |   bit_to_mask< bit3>::value
-        |   bit_to_mask< bit4>::value
-        |   bit_to_mask< bit5>::value
-        |   bit_to_mask< bit6>::value
-        |   bit_to_mask< bit7>::value;
+    static const uint8_t mask = (0xff >> (8 - bits)) << first_bit;
+	static const uint8_t shift = first_bit;
 };
 
 template< PortPlaceholder port, typename port_tag>
@@ -141,6 +129,27 @@ inline void reset( const pins_type &)
     get_port<pins_type::port>( tag_port()) &= ~pins_type::mask;
 }
 
+
+template< typename pins_type>
+inline void write( const pins_type &, uint8_t value)
+{
+	uint8_t shifted = (value << pins_type::shift) & pins_type::mask;
+	volatile uint8_t &port = get_port<pins_type::port>( tag_port());
+	port = (port & ~pins_type::mask) | shifted;
+}
+
+template< typename pins_type>
+inline uint8_t read( const pins_type &)
+{
+	return (get_port<pins_type::port>( tag_pin()) & pins_type::mask)
+				>> pins_type::shift;
+}
+
+template< typename pins_type>
+inline void declare_output( const pins_type &)
+{
+	get_port<pins_type::port>( tag_ddr()) |= pins_type::mask;
+}
 
 }
 
