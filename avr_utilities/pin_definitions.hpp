@@ -58,6 +58,23 @@ namespace pin_definitions
     DECLARE_PORT_TRAITS( F)
 #endif
 
+#undef DECLARE_PORT_TRAITS
+
+
+// typedefs for a simple list-type
+struct empty_list {};
+
+/// a set of pins or pin groups
+template< typename head_, typename tail_ = empty_list>
+struct cons
+{
+    typedef head_ head;
+    typedef tail_ tail;
+
+    typedef cons< head_, tail_> as_cons;
+};
+
+
 template< PortPlaceholder port_, uint8_t bit_>
 struct pin_definition
 {
@@ -65,38 +82,7 @@ struct pin_definition
     static const uint8_t            bit  = bit_;
     static const uint8_t            mask = 1 << bit_;
 	static const uint8_t 			shift = bit_;
-};
-
-template< uint8_t bit_>
-struct bit_type 
-{
-    static const uint8_t    value = bit_;
-};
-
-/// this metafunction converts a bit numer to a mask (1 << bit_nr).
-template< uint8_t bit_>
-struct bit_to_mask
-{
-    static const uint8_t value = 1 << bit_;
-};
-
-template <>
-struct bit_to_mask< 255>
-{
-    static const uint8_t value = 0;
-};
-
-
-struct null_def {};
-
-/// a set of pins or pin groups
-template< typename head_, typename tail_ = null_def>
-struct pin_cons_list
-{
-    typedef head_ head;
-    typedef tail_ tail;
-
-    typedef pin_cons_list< head_, tail_> as_cons_list;
+    typedef cons< pin_definition< port_, bit_>, empty_list> as_cons;
 };
 
 /// a contiguous set of bits in one port
@@ -106,29 +92,79 @@ template< PortPlaceholder port_,
             >
 struct pin_group
 {
-    static const uint8_t port = port_;
-    static const uint8_t mask = (0xff >> (8 - bits)) << first_bit;
-	static const uint8_t shift = first_bit;
+    static const PortPlaceholder    port = port_;
+    static const uint8_t            mask = (0xff >> (8 - bits)) << first_bit;
+	static const uint8_t            shift = first_bit;
+
+    typedef cons< pin_group< port_, first_bit, bits>, empty_list> as_cons;
 };
+
+
+// here be meta-functions...
+
+
+/// true-value for if_ metafunction
+struct true_type { typedef true_type type;};
+
+/// false-value for if_ metafunction
+struct false_type { typedef false_type type;};
+
+/// meta-function that returns true if two ports are equal
+template< PortPlaceholder left, PortPlaceholder right>
+struct is_same_port : false_type {};
+
+template< PortPlaceholder holder>
+struct is_same_port< holder, holder> : true_type {};
+
+
+/// generic if-metafunction. returns the 'if_true' type if the condition
+/// is of type true_type.
+template< typename condition, typename if_true, typename if_false>
+struct if_ 
+{
+    typedef if_false type;
+};
+
+template< typename if_true, typename if_false>
+struct if_< true_type, if_true, if_false> 
+{
+    typedef if_true type;
+};
+
+
+
+struct null_mask
+{
+    static const uint8_t mask = 0;
+};
+
+/// meta-function that creates a mask of the all pins of one port, given a list of pin-
+/// or pin group definitions.
+template< PortPlaceholder port, typename list>
+struct mask_for_port
+{
+    static const uint8_t value = 
+        if_< 
+            typename is_same_port<list::head::port, port>::type,
+            typename list::head,
+            null_mask
+            >::type::mask
+        | mask_for_port< port, typename list::tail>::value;
+};
+
+/// specialization of this meta function for an empty list
+template< PortPlaceholder port>
+struct mask_for_port< port, empty_list>
+{
+    static const uint8_t value = 0;
+};
+
 
 template< PortPlaceholder port, typename port_tag>
 inline volatile uint8_t &get_port( const port_tag &tag)
 {
     return port_traits<port>::get( tag);
 }
-
-template< typename pins_type>
-inline void set( const pins_type &)
-{
-    get_port<pins_type::port>( tag_port()) |= pins_type::mask;
-}
-
-template< typename pins_type>
-inline void reset( const pins_type &)
-{
-    get_port<pins_type::port>( tag_port()) &= ~pins_type::mask;
-}
-
 
 template< typename pins_type>
 inline void write( const pins_type &, uint8_t value)
@@ -145,12 +181,135 @@ inline uint8_t read( const pins_type &)
 				>> pins_type::shift;
 }
 
-template< typename pins_type>
-inline void declare_output( const pins_type &)
-{
-	get_port<pins_type::port>( tag_ddr()) |= pins_type::mask;
+    template< typename head, typename tail = empty_list>
+    struct cons_builder
+    {
+        typedef cons< head, tail> as_cons;
+        
+        template< typename new_head>
+        cons_builder< new_head, as_cons > operator()( const new_head &) const
+        {
+            return cons_builder< new_head, cons< head, tail> >();
+        }
+    };
+
+    template< typename head>
+    cons_builder< head> list_of( const head&)
+    {
+        return cons_builder<head, empty_list>();
+    }
+
+    /// template meta function that removes all pin- and pin group definitions
+    /// for a given port from a list.
+    template< PortPlaceholder port, typename list_type>
+    struct remove_port
+    {
+        typedef typename list_type::head head;
+        typedef typename list_type::tail tail;
+        typedef typename if_<
+                    typename is_same_port< port, head::port>::type,
+                    typename remove_port< port, tail>::type,
+                    cons< head, typename remove_port< port, tail>::type>
+                    >::type type;
+    };
+
+    template< PortPlaceholder port>
+    struct remove_port< port, empty_list>
+    {
+        typedef empty_list type;
+    };
+
+    namespace detail
+    {
+        template< typename operation, typename port_tag>
+        inline void set_as_output( empty_list &, const operation &, const port_tag &)
+        {
+            // do nothing for an empty list;
+        }
+
+        template< typename list, typename operation, typename port_tag>
+        struct for_each_port_operator
+        {
+            static const PortPlaceholder port = list::head::port;
+            static inline void operate()
+            {
+                // initialize the port of the first element of the list
+                operation()( get_port<port>( port_tag()), mask_for_port< port, list>::value);
+
+                // now remove all elements for this port and continue to initialize
+                for_each_port_operator< typename remove_port< port, typename list::tail>::type, operation, port_tag>::operate();
+            }
+        };
+
+        template< typename operation, typename port_tag>
+        struct for_each_port_operator< empty_list, operation, port_tag>
+        {
+            static inline void operate()
+            {
+                // do nothing for the empty list...
+            }
+        };
+
+    }
+
+    struct assign
+    {
+        void operator()( volatile uint8_t &reg, uint8_t value) const
+        {
+            reg = value;
+        }
+    };
+
+    struct set_bits
+    {
+        void operator()( volatile uint8_t &reg, uint8_t value) const
+        {
+            reg |= value;
+        }
+    };
+
+    struct reset_bits
+    {
+        void operator()( volatile uint8_t &reg, uint8_t value) const
+        {
+            reg &= ~value;
+        }
+    };
+
+    template< typename list_builder>
+    inline void init_as_output( const list_builder &)
+    {
+        detail::for_each_port_operator< typename list_builder::as_cons, assign, tag_ddr>::operate();
+    }
+
+    template< typename list_builder>
+    inline void make_output( const list_builder &)
+    {
+        detail::for_each_port_operator< typename list_builder::as_cons, set_bits, tag_ddr>::operate();
+    }
+
+    template< typename list_builder>
+    inline void make_input( const list_builder &)
+    {
+        detail::for_each_port_operator< typename list_builder::as_cons, reset_bits, tag_ddr>::operate();
+    }
+
+    template< typename list_builder>
+    inline void set( const list_builder &)
+    {
+        detail::for_each_port_operator< typename list_builder::as_cons, set_bits, tag_port>::operate();
+    }
+
+    template< typename list_builder>
+    inline void reset( const list_builder &)
+    {
+        detail::for_each_port_operator< typename list_builder::as_cons, reset_bits, tag_port>::operate();
+    }
 }
 
-}
+#define DEFINE_PIN( name_, p_, bit_) \
+    pin_definitions::pin_definition< pin_definitions::port_##p_, bit_> name_;
+#define DEFINE_PIN_GROUP( name_, p_, first_bit_, bit_count_) \
+    pin_definitions::pin_group< pin_definitions::port_##p_, first_bit_, bit_count_> name_;
 
 #endif //PIN_DEFINITIONS_HPP_
