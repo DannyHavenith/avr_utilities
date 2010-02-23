@@ -166,20 +166,6 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     return port_traits<port>::get( tag);
 }
 
-template< typename pins_type>
-inline void write( const pins_type &, uint8_t value)
-{
-	uint8_t shifted = (value << pins_type::shift) & pins_type::mask;
-	volatile uint8_t &port = get_port<pins_type::port>( tag_port());
-	port = (port & ~pins_type::mask) | shifted;
-}
-
-template< typename pins_type>
-inline uint8_t read( const pins_type &)
-{
-	return (get_port<pins_type::port>( tag_pin()) & pins_type::mask)
-				>> pins_type::shift;
-}
 
     template< typename head, typename tail = empty_list>
     struct cons_builder
@@ -276,35 +262,67 @@ inline uint8_t read( const pins_type &)
         }
     };
 
+    // the following functions use pin definitions to perform common tasks
+
+    /// initialize all ports of the given pin definitions, turning all given pins to output and making all 
+    /// bits in those ports that are not mentioned inputs.
     template< typename list_builder>
     inline void init_as_output( const list_builder &)
     {
         detail::for_each_port_operator< typename list_builder::as_cons, assign, tag_ddr>::operate();
     }
 
+    /// make the given pins outputs. This does not affect other pins on the same ports
     template< typename list_builder>
     inline void make_output( const list_builder &)
     {
         detail::for_each_port_operator< typename list_builder::as_cons, set_bits, tag_ddr>::operate();
     }
 
+    /// explicitly make the given pins inputs. This does not affect other pins on the same ports.
     template< typename list_builder>
     inline void make_input( const list_builder &)
     {
         detail::for_each_port_operator< typename list_builder::as_cons, reset_bits, tag_ddr>::operate();
     }
 
+    /// set the given bits to 1, this changes the output ports
     template< typename list_builder>
     inline void set( const list_builder &)
     {
         detail::for_each_port_operator< typename list_builder::as_cons, set_bits, tag_port>::operate();
     }
 
+    /// resets the given bits to zero.
     template< typename list_builder>
     inline void reset( const list_builder &)
     {
         detail::for_each_port_operator< typename list_builder::as_cons, reset_bits, tag_port>::operate();
     }
+
+    /// write a value to the given output pin or pin-group.
+    template< typename pins_type>
+    inline void write( const pins_type &, uint8_t value)
+    {
+    	uint8_t shifted = (value << pins_type::shift) & pins_type::mask;
+    	volatile uint8_t &port = get_port<pins_type::port>( tag_port());
+    	port = (port & ~pins_type::mask) | shifted;
+    }
+
+    /// read a value from the given input pin or pin-group
+    template< typename pins_type>
+    inline uint8_t read( const pins_type &)
+    {
+    	return (get_port<pins_type::port>( tag_pin()) & pins_type::mask)
+    				>> pins_type::shift;
+    }
+
+    template< typename pins_type>
+    inline bool is_set( const pins_type &)
+    {
+    	return (get_port<pins_type::port>( tag_pin()) & pins_type::mask) != 0;
+    }
+    
 }
 
 #define DEFINE_PIN( name_, p_, bit_) \
