@@ -1,10 +1,19 @@
 
 /// pin_definitions.hpp - template classes and functions to support pin definitons as
 /// a combination of both a port and a bit of that port
+/// This header file allows a style of programming where a programmer defines an output-
+/// or input bit as a combination of a port and a bit number and then use the set or reset
+/// function to set or reset that particular bit, e.g.
+///
+/// DEFINE_PIN( my_output, C, 0)
+/// set( my_output) // equivalent to PORTC |= _BV(0)
+///
+/// The templates allow the code to be as efficient as handwritten statements, at the cost of
+/// some compilation time.
 
 #if !defined(PIN_DEFINITIONS_HPP_)
 #define PIN_DEFINITIONS_HPP_
-#include <stdint.h>
+#include <stdint.h>  // including a std C header in an obvious C++ header file. hmm.
 #include <avr/io.h>
 
 namespace pin_definitions
@@ -138,7 +147,7 @@ struct null_mask
     static const uint8_t mask = 0;
 };
 
-/// meta-function that creates a mask of the all pins of one port, given a list of pin-
+/// meta-function that creates a mask of all pins of one port, given a list of pin-
 /// or pin group definitions.
 template< PortPlaceholder port, typename list>
 struct mask_for_port
@@ -213,6 +222,10 @@ inline volatile uint8_t &get_port( const port_tag &tag)
             // do nothing for an empty list;
         }
 
+        /// perform an operation on every port in a list of pins.
+        /// For each port in the list, this functor will aggregate all pins into a mask and then
+        /// call the given operation with the port and the mask as arguments.
+        /// The operation will be called exactly one time for each port that appears in the list.
         template< typename list, typename operation, typename port_tag>
         struct for_each_port_operator
         {
@@ -265,7 +278,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     // the following functions use pin definitions to perform common tasks
 
     /// initialize all ports of the given pin definitions, turning all given pins to output and making all 
-    /// bits in those ports that are not mentioned inputs.
+    /// bits that are not mentioned in those ports inputs.
     template< typename list_builder>
     inline void init_as_output( const list_builder &)
     {
@@ -317,6 +330,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     				>> pins_type::shift;
     }
 
+    /// returns true iff at least one of the bits in the pin-definition or pin-group is set.
     template< typename pins_type>
     inline bool is_set( const pins_type &)
     {
