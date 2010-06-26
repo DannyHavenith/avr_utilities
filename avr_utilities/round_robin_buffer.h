@@ -97,6 +97,29 @@ struct round_robin_buffer
         while (!read(&value)) /*nop*/ ;
         return value;
     }
+
+    /// return the number of (committed) bytes in the buffer
+    uint8_t size() const volatile
+	{
+		if (is_full) return buffer_size;
+
+		const int8_t size = (int8_t) write_index - (int8_t)read_index;
+		if (size < 0)
+		{
+			return buffer_size + size;
+		}
+		else
+		{
+			return size;
+		}
+	}
+
+    /// return whether the buffer is empty
+    bool empty() const volatile
+	{
+    	return write_index == read_index && !is_full;
+	}
+
 };
 
 
