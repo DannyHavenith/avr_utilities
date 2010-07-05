@@ -176,6 +176,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
 }
 
 
+	/// this helper class is used to construct cons lists.
     template< typename head, typename tail = empty_list>
     struct cons_builder
     {
@@ -188,6 +189,9 @@ inline volatile uint8_t &get_port( const port_tag &tag)
         }
     };
 
+    /// this function allows an expression of the form:
+    ///     list_of( pindef0)(pindef1)(pindef3)... etc.
+    /// list_of(...) returns a cons builder that itself defines an operator().
     template< typename head>
     cons_builder< head> list_of( const head&)
     {
@@ -196,6 +200,8 @@ inline volatile uint8_t &get_port( const port_tag &tag)
 
     /// template meta function that removes all pin- and pin group definitions
     /// for a given port from a list.
+    /// This meta function is used to remove all pin definitions for a given port,
+    /// after the mask for that port has already been constructed and used.
     template< PortPlaceholder port, typename list_type>
     struct remove_port
     {
@@ -226,6 +232,8 @@ inline volatile uint8_t &get_port( const port_tag &tag)
         /// For each port in the list, this functor will aggregate all pins into a mask and then
         /// call the given operation with the port and the mask as arguments.
         /// The operation will be called exactly one time for each port that appears in the list.
+        /// The tag parameter determines whether the operation will be performed on the port input, the port
+        /// output, or the port data direction registers.
         template< typename list, typename operation, typename port_tag>
         struct for_each_port_operator
         {
@@ -240,6 +248,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
             }
         };
 
+        /// specialization of the for_each_port_operator metafunction for empty lists.
         template< typename operation, typename port_tag>
         struct for_each_port_operator< empty_list, operation, port_tag>
         {
