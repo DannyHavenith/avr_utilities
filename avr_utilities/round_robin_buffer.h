@@ -6,18 +6,14 @@
 template<uint8_t buffer_size = 64, typename datatype = uint8_t>
 struct round_robin_buffer
 {
+public:
 
     typedef datatype value_type;
 
-    bool    is_full;
-    uint8_t tentative_index;
-    uint8_t write_index;
-    uint8_t read_index;
-    value_type buffer[buffer_size];
 
     /// tentative writes, write to the buffer, but don't
     /// make the data available to readers yet.
-    bool __attribute__((noinline)) write_tentative( uint8_t value) volatile 
+    bool __attribute__((noinline)) write_tentative( value_type value) volatile
     {
         if (!is_full)
         {
@@ -98,6 +94,12 @@ struct round_robin_buffer
         return value;
     }
 
+    // wait for the buffer to become not full and write
+    void write_tentative_w( value_type value) volatile
+	{
+    	while (!write_tentative( value)) /*nop*/;
+	}
+
     /// return the number of (committed) bytes in the buffer
     uint8_t size() const volatile
 	{
@@ -119,6 +121,17 @@ struct round_robin_buffer
 	{
     	return write_index == read_index && !is_full;
 	}
+
+    bool full() const volatile
+	{
+    	return is_full;
+	}
+private:
+    bool    is_full;
+    uint8_t tentative_index;
+    uint8_t write_index;
+    uint8_t read_index;
+    value_type buffer[buffer_size];
 
 };
 
