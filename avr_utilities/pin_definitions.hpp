@@ -83,10 +83,24 @@ struct cons
     typedef cons< head_, tail_> as_cons;
 };
 
+template< typename derived_>
+struct statics_implementation
+{
+    static void set()
+    {
+        pin_definitions::set( derived_());
+    }
+
+    static void reset()
+    {
+        ::pin_definitions::reset(derived_());
+    }
+};
 
 template< PortPlaceholder port_, uint8_t bit_>
-struct pin_definition
+struct pin_definition : statics_implementation< pin_definition< port_, bit_> >
 {
+
     static const PortPlaceholder    port = port_;
     static const uint8_t            bit  = bit_;
     static const uint8_t            mask = 1 << bit_;
@@ -350,7 +364,14 @@ inline volatile uint8_t &get_port( const port_tag &tag)
 
 #define DEFINE_PIN( name_, p_, bit_) \
 	__attribute__((unused)) pin_definitions::pin_definition< pin_definitions::port_##p_, bit_>  name_ ;
+
+#define TYPEDEF_PIN( name_, p_, bit_) \
+    typedef pin_definitions::pin_definition< pin_definitions::port_##p_, bit_>  name_ ;
+
 #define DEFINE_PIN_GROUP( name_, p_, first_bit_, bit_count_) \
 	__attribute__((unused)) pin_definitions::pin_group< pin_definitions::port_##p_, first_bit_, bit_count_> name_;
+
+#define TYPEDEF_PIN_GROUP( name_, p_, first_bit_, bit_count_) \
+    typedef pin_definitions::pin_group< pin_definitions::port_##p_, first_bit_, bit_count_> name_;
 
 #endif //PIN_DEFINITIONS_HPP_
