@@ -39,6 +39,15 @@ public:
         return status;
     }
 
+    static uint8_t read_register( uint8_t reg)
+    {
+        reset( pins.csn);
+        spi::transmit_receive( R_REGISTER | (REGISTER_MASK & reg));
+        uint8_t result = spi::transmit_receive(0);
+        set( pins.csn);
+        return result;
+    }
+
     static uint8_t write_register( uint8_t reg, const uint8_t *values, uint8_t size)
     {
         reset( pins.csn);
@@ -70,6 +79,11 @@ public:
         return set_transmit_address( address, size);
     }
 
+    static void start_listen()
+    {
+        set( pins.ce);
+    }
+
     static uint8_t get_status()
     {
         reset( pins.csn);
@@ -92,7 +106,13 @@ public:
         }
     }
 
-    static void send( const uint8_t *buffer, uint8_t buffer_size)
+    static bool data_ready()
+    {
+        const uint8_t status = read_register( FIFO_STATUS);
+        return (status & _BV( RX_EMPTY )) == 0;
+    }
+
+    static bool send( const uint8_t *buffer, uint8_t buffer_size)
     {
         reset( pins.ce);
 
@@ -102,12 +122,26 @@ public:
 //        set( pins.csn);
 
         reset( pins.csn);
-        spi::transmit_receive( W_TX_PAYLOAD);
+        uint8_t status = spi::transmit_receive( W_TX_PAYLOAD);
+        if ( status & _BV( TX_FULL))
+        {
+            return false;
+        }
+
         spi::transmit( buffer, buffer_size);
         set( pins.csn);
         set( pins.ce);
         _delay_us( 10);
         reset( pins.ce);
+        return true;
+    }
+
+    static void receive( uint8_t *buffer, uint8_t buffer_size)
+    {
+        reset( pins.csn);
+        spi::transmit_receive( R_RX_PAYLOAD);
+        spi::receive( buffer, buffer_size);
+        set( pins.csn);
     }
 
     template< uint8_t size>
