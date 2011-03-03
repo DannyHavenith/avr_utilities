@@ -83,22 +83,9 @@ struct cons
     typedef cons< head_, tail_> as_cons;
 };
 
-template< typename derived_>
-struct statics_implementation
-{
-    static void set()
-    {
-        pin_definitions::set( derived_());
-    }
-
-    static void reset()
-    {
-        ::pin_definitions::reset(derived_());
-    }
-};
 
 template< PortPlaceholder port_, uint8_t bit_>
-struct pin_definition : statics_implementation< pin_definition< port_, bit_> >
+struct pin_definition
 {
 
     static const PortPlaceholder    port = port_;
@@ -124,7 +111,7 @@ struct pin_group
 
 
 // here be meta-functions...
-
+// the following functions are a very lightweight version of boost.mpl
 
 /// true-value for if_ metafunction
 struct true_type { typedef true_type type;};
@@ -132,12 +119,6 @@ struct true_type { typedef true_type type;};
 /// false-value for if_ metafunction
 struct false_type { typedef false_type type;};
 
-/// meta-function that returns true if two ports are equal
-template< PortPlaceholder left, PortPlaceholder right>
-struct is_same_port : false_type {};
-
-template< PortPlaceholder holder>
-struct is_same_port< holder, holder> : true_type {};
 
 
 /// generic if-metafunction. returns the 'if_true' type if the condition
@@ -154,15 +135,56 @@ struct if_< true_type, if_true, if_false>
     typedef if_true type;
 };
 
+template< typename left_, typename right_>
+struct and_ : false_type {};
 
+template<>
+struct and_<true_type, true_type> : true_type {};
+
+/// utility template to employ SFINAE to add or remove
+/// certain functions from an overload set.
+template< typename condition, typename t = void>
+struct enable_if
+{
+
+};
+
+template< typename t>
+struct enable_if< true_type, t>
+{
+    typedef t type;
+};
+
+/// meta-function that tells us if a given type is a pin or pin group.
+template <typename T>
+struct is_pin_or_pin_group : false_type {};
+
+template< PortPlaceholder port_, uint8_t bit_>
+struct is_pin_or_pin_group< pin_definition<port_, bit_> >
+    : true_type {};
+
+template< PortPlaceholder port_,
+            uint8_t first_bit,
+            uint8_t bits
+            >
+struct is_pin_or_pin_group< pin_group< port_, first_bit, bits> >
+    : true_type {};
+
+
+/// meta-function that returns true if two ports are equal
+template< PortPlaceholder left, PortPlaceholder right>
+struct is_same_port : false_type {};
+
+template< PortPlaceholder holder>
+struct is_same_port< holder, holder> : true_type {};
 
 struct null_mask
 {
     static const uint8_t mask = 0;
 };
 
-/// meta-function that creates a mask of all pins of one port, given a list of pin-
-/// or pin group definitions.
+/// meta-function that creates a mask of all pins of one port, given a (cons-)list of pin-
+/// or pin group definitions for several ports.
 template< PortPlaceholder port, typename list>
 struct mask_for_port
 {
@@ -210,6 +232,34 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     cons_builder< head> list_of( const head&)
     {
         return cons_builder<head, empty_list>();
+    }
+
+    /// definition of an operator|() that allows us to create lists of
+    /// pins with an expression like:
+    ///    pindef0 | pindef1 | pindef2...
+    /// enable_if is used to make sure each argument is either a pin or a
+    /// pin group.
+    template< typename left_type, typename right_type>
+    typename enable_if<
+        typename and_<
+            typename is_pin_or_pin_group<left_type>::type,
+            typename is_pin_or_pin_group<right_type>::type
+        >::type,
+        cons<left_type, cons<right_type> >
+    >::type operator|( const left_type &, const right_type &)
+    {
+        return cons<left_type, cons<right_type> >();
+    }
+
+    /// this definition of operator|() allows us to combine a list of pins
+    /// with either a pin definition or a pin group.
+    template< typename right_type, typename head, typename tail>
+    typename enable_if<
+        typename is_pin_or_pin_group<right_type>::type,
+        cons< right_type, cons< head, tail> >
+    >::type operator|( const cons<head, tail> &, const right_type &)
+    {
+        return cons< right_type, cons< head, tail> >();
     }
 
     /// template meta function that removes all pin- and pin group definitions

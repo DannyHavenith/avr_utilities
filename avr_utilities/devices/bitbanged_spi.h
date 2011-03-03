@@ -76,6 +76,14 @@ public:
         }
     }
 
+    static void receive( uint8_t *in_buffer, uint8_t length)
+    {
+        while (length--)
+        {
+            *in_buffer++ = exchange_byte( 0);
+        }
+    }
+
     // transmit a zero-terminated string of characters.
     static void transmit( const char *text)
     {
