@@ -336,6 +336,8 @@ inline volatile uint8_t &get_port( const port_tag &tag)
 
     }
 
+    /// This operator will assign the value to the given register.
+    /// operator to be used with for_each_port_operator
     struct assign
     {
         void operator()( volatile uint8_t &reg, uint8_t value) const
@@ -344,6 +346,8 @@ inline volatile uint8_t &get_port( const port_tag &tag)
         }
     };
 
+    /// This operator will logical-or the value with the given register.
+    /// operator to be used with for_each_port_operator
     struct set_bits
     {
         void operator()( volatile uint8_t &reg, uint8_t value) const
@@ -352,6 +356,8 @@ inline volatile uint8_t &get_port( const port_tag &tag)
         }
     };
 
+    /// This operator will reset all bits given in the second argument in the register
+    /// operator to be used with for_each_port_operator
     struct reset_bits
     {
         void operator()( volatile uint8_t &reg, uint8_t value) const
@@ -364,13 +370,17 @@ inline volatile uint8_t &get_port( const port_tag &tag)
 
     /// initialize all ports of the given pin definitions, turning all given pins to output and making all 
     /// bits that are not mentioned in those ports inputs.
+    /// This template receives a list_builder, or list as template argument. A list contains (port, bits)-pairs
+    /// and this function will combine all bits for each port mentioned in the list and then assign the accumulated
+    /// bits value to the data direction register for those ports.
     template< typename list_builder>
     inline void init_as_output( const list_builder &)
     {
         detail::for_each_port_operator< typename list_builder::as_cons, assign, tag_ddr>::operate();
     }
 
-    /// make the given pins outputs. This does not affect other pins on the same ports
+    /// make the given pins outputs. This does not affect other pins on the same ports.
+    /// See also init_as_output.
     template< typename list_builder>
     inline void make_output( const list_builder &)
     {
@@ -378,6 +388,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     }
 
     /// explicitly make the given pins inputs. This does not affect other pins on the same ports.
+    /// See also init_as_output.
     template< typename list_builder>
     inline void make_input( const list_builder &)
     {
@@ -385,6 +396,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     }
 
     /// set the given bits to 1, this changes the output ports
+    /// See also init_as_output.
     template< typename list_builder>
     inline void set( const list_builder &)
     {
@@ -392,6 +404,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     }
 
     /// resets the given bits to zero.
+    /// See also init_as_output.
     template< typename list_builder>
     inline void reset( const list_builder &)
     {
