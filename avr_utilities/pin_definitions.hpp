@@ -35,7 +35,14 @@ namespace pin_definitions
     struct tag_ddr  {};
 
     template< PortPlaceholder port>
-    struct port_traits {};
+    struct port_traits
+    {
+    private:
+        // if you get a compile error complaining that get returns void,
+        // you may be using a port that has not been defined for your mcu (like port A on an atmega88).
+        template<typename T>
+        static void get( const T &){}
+    };
 
 #define DECLARE_PORT_TRAITS( p_)                                    \
         template<>                                                  \
@@ -208,6 +215,8 @@ struct mask_for_port< port, empty_list>
 template< PortPlaceholder port, typename port_tag>
 inline volatile uint8_t &get_port( const port_tag &tag)
 {
+    // if you get a compile error complaining that get() returns void,
+    // you may be using a port that has not been defined for your mcu (like port A on an atmega88).
     return port_traits<port>::get( tag);
 }
 
@@ -271,6 +280,9 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     {
         typedef typename list_type::head head;
         typedef typename list_type::tail tail;
+        // if the head type is associated with 'port', create a list without the head type and recurse on the tail-type
+        // if the head type is not associated with 'port' create a list that consists of the head type at the front of
+        // the result of recursion on the tail type
         typedef typename if_<
                     typename is_same_port< port, head::port>::type,
                     typename remove_port< port, tail>::type,
@@ -304,15 +316,15 @@ inline volatile uint8_t &get_port( const port_tag &tag)
             static const PortPlaceholder port = list::head::port;
             static inline void operate()
             {
-                // initialize the port of the first element of the list
+                // perform the operation on the port of the first element of the list
                 operation()( get_port<port>( port_tag()), mask_for_port< port, list>::value);
 
-                // now remove all elements for this port and continue to initialize
+                // now remove all elements for this port from 'list' and recurse.
                 for_each_port_operator< typename remove_port< port, typename list::tail>::type, operation, port_tag>::operate();
             }
         };
 
-        /// specialization of the for_each_port_operator metafunction for empty lists.
+        /// specialization of the for_each_port_operator meta function for empty lists.
         template< typename operation, typename port_tag>
         struct for_each_port_operator< empty_list, operation, port_tag>
         {
