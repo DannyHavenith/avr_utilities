@@ -90,6 +90,19 @@ struct cons
     typedef cons< head_, tail_> as_cons;
 };
 
+// meta-function to concatenate two cons lists into a single cons list.
+template< typename H, typename T>
+struct concatenate_cons
+{
+    typedef cons< H, T> type;
+};
+
+template< typename H1, typename T1, typename T2>
+struct concatenate_cons< cons< H1, T1>, T2>
+{
+    typedef concatenate_cons< T1, cons<H1, T2> > type;
+};
+
 
 template< PortPlaceholder port_, uint8_t bit_>
 struct pin_definition
