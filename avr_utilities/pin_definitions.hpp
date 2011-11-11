@@ -450,16 +450,16 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     
 }
 
-#define DEFINE_PIN( name_, p_, bit_) \
-	__attribute__((unused)) pin_definitions::pin_definition< pin_definitions::port_##p_, bit_>  name_ ;
+#define PIN_TYPE( p_, bit_) \
+    pin_definitions::pin_definition< pin_definitions::port_##p_, bit_>
 
-#define TYPEDEF_PIN( name_, p_, bit_) \
-    typedef pin_definitions::pin_definition< pin_definitions::port_##p_, bit_>  name_ ;
+#define DEFINE_PIN( name_, p_, bit_) \
+	__attribute__((unused)) PIN_TYPE( p_, bit_)  name_ ;
+
+#define PIN_GROUP_TYPE( p_, first_bit_, bit_count_) \
+    pin_definitions::pin_group< pin_definitions::port_##p_, first_bit_, bit_count_>
 
 #define DEFINE_PIN_GROUP( name_, p_, first_bit_, bit_count_) \
-	__attribute__((unused)) pin_definitions::pin_group< pin_definitions::port_##p_, first_bit_, bit_count_> name_;
-
-#define TYPEDEF_PIN_GROUP( name_, p_, first_bit_, bit_count_) \
-    typedef pin_definitions::pin_group< pin_definitions::port_##p_, first_bit_, bit_count_> name_;
+	__attribute__((unused)) PIN_GROUP_TYPE( p_, first_bit_, bit_count_) name_;
 
 #endif //PIN_DEFINITIONS_HPP_
