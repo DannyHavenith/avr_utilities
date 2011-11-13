@@ -7,6 +7,9 @@
 
 #ifndef HD44780_HPP_
 #define HD44780_HPP_
+#include "avr_utilities/pin_definitions.hpp"
+#include <util/delay.h> // for _delay_ms
+
 
 namespace hd44780
 {
@@ -15,19 +18,19 @@ typedef uint8_t byte;
 namespace commands
 {
 
-byte if_( bool condition, byte value)
+inline byte if_( bool condition, byte value)
 {
     return condition?value:0;
 }
 
-byte clr() { return 0x01;}
-byte home() { return 0x02;}
+inline byte clr() { return 0x01;}
+inline byte home() { return 0x02;}
 
 /**
  * Select the entry mode.  inc determines whether the address counter
  * auto-increments, shift selects an automatic display shift.
  */
-byte entry_mode( bool increment, bool shift)
+inline byte entry_mode( bool increment, bool shift)
 {
     return 0x04 | if_(increment, 0x02) | if_(shift, 0x01);
 }
@@ -36,7 +39,7 @@ byte entry_mode( bool increment, bool shift)
  * Selects display on/off, cursor on/off, cursor blinking
  * on/off.
  */
-byte display_control( bool display, bool cursor, bool blink)
+inline byte display_control( bool display, bool cursor, bool blink)
 {
     return 0x08 | if_(display, 0x04) | if_( cursor, 0x02) | if_( blink, 0x01);
 }
@@ -45,7 +48,7 @@ byte display_control( bool display, bool cursor, bool blink)
  * With shift = 1, shift display right or left.
  * With shift = 0, move cursor right or left.
  */
-byte shift( bool shift, bool right)
+inline byte shift( bool shift, bool right)
 {
     return 0x10 | if_( shift, 0x08) | if_( right, 0x04);
 }
@@ -55,7 +58,7 @@ byte shift( bool shift, bool right)
  * for a two-line display, font_5x10 selects the 5x10 dot font (5x8
  * dots if clear).
  */
-byte function_set( bool if8bit, bool two_lines, bool font_5x10)
+inline byte function_set( bool if8bit, bool two_lines, bool font_5x10)
 {
     return 0x20 | if_(if8bit, 0x10) | if_(two_lines, 0x08) | if_( font_5x10, 0x04);
 }
@@ -63,7 +66,7 @@ byte function_set( bool if8bit, bool two_lines, bool font_5x10)
 /**
  * Set the next character generator address to addr.
  */
-byte cg_addr( byte addr)
+inline byte cg_addr( byte addr)
 {
     return 0x40 | (addr & 0x3f);
 }
@@ -71,7 +74,7 @@ byte cg_addr( byte addr)
 /**
  * Set the next display address to addr.
  */
-byte dd_addr( byte addr)
+inline byte dd_addr( byte addr)
 {
     return 0x80 | (addr & 0x7f);
 }
@@ -84,7 +87,7 @@ class lcd
 public:
 
     template<typename OutputInitializer>
-    static void init( OutputInitializer &outputs)
+    static inline void init( const OutputInitializer &outputs)
     {
         using namespace commands;
         outputs( e | rw | rs | data);
@@ -100,7 +103,7 @@ public:
         outnibble( 0x03);
         _delay_ms( 4.1);
         outnibble( 0x03);
-        delay_ms( 0.1);
+        _delay_ms( 0.1);
         outnibble( 0x03);
 
         // switch to 4 bit mode (this is still an 8-bit instruction,
@@ -113,9 +116,15 @@ public:
         command_out( display_control( false, false, false));
         command_out( clr());
         command_out( entry_mode( true, false));
+        command_out( display_control( true, true, false));
     }
 
-    static void data_out( byte data)
+    static void string_out( const char *string)
+    {
+        while (*string) data_out( *string++);
+    }
+
+    static void data_out( byte data)__attribute__((always_inline))
     {
         outbyte( data, true);
     }
@@ -138,10 +147,10 @@ public:
 private:
 
     // pin definitions.
-    static pin_e    e;
-    static pin_rw   rw;
-    static pin_rs   rs;
-    static data_pins data;
+    static const pin_e    e;
+    static const pin_rw   rw;
+    static const pin_rs   rs;
+    static const data_pins data;
 
     static const byte BUSY_FLAG = 0x80;
 
@@ -160,8 +169,8 @@ private:
         {
             reset( rs);
         }
-        outnibble( byte >> 4, rs);
-        outnibble( byte & 0x0f, rs);
+        outnibble( byte >> 4);
+        outnibble( byte & 0x0f);
         wait_ready();
     }
 
@@ -192,11 +201,12 @@ private:
     {
         byte result;
         set( rw);
-        make_inputs( data);
+        make_input( data);
         set( e);
         delay_500ns();
         result = read( data);
         reset( e);
+        make_output( data);
         return result;
     }
 
