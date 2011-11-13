@@ -100,9 +100,14 @@ struct concatenate_cons
 template< typename H1, typename T1, typename T2>
 struct concatenate_cons< cons< H1, T1>, T2>
 {
-    typedef concatenate_cons< T1, cons<H1, T2> > type;
+    typedef typename concatenate_cons< T1, cons<H1, T2> >::type type;
 };
 
+template< typename H, typename T2>
+struct concatenate_cons< cons< H, empty_list>, T2>
+{
+    typedef cons< H, T2> type;
+};
 
 template< PortPlaceholder port_, uint8_t bit_>
 struct pin_definition
@@ -327,7 +332,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
         struct for_each_port_operator
         {
             static const PortPlaceholder port = list::head::port;
-            static inline void operate()
+            static inline void operate() __attribute__((always_inline))
             {
                 // perform the operation on the port of the first element of the list
                 operation()( get_port<port>( port_tag()), mask_for_port< port, list>::value);
@@ -341,7 +346,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
         template< typename operation, typename port_tag>
         struct for_each_port_operator< empty_list, operation, port_tag>
         {
-            static inline void operate()
+            static inline void operate() __attribute__((always_inline))
             {
                 // do nothing for the empty list...
             }
@@ -387,7 +392,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     /// and this function will combine all bits for each port mentioned in the list and then assign the accumulated
     /// bits value to the data direction register for those ports.
     template< typename list_builder>
-    inline void init_as_output( const list_builder &)
+    inline extern void init_as_output( const list_builder &)
     {
         detail::for_each_port_operator< typename list_builder::as_cons, assign, tag_ddr>::operate();
     }
@@ -411,7 +416,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     /// set the given bits to 1, this changes the output ports
     /// See also init_as_output.
     template< typename list_builder>
-    inline void set( const list_builder &)
+    inline extern void set( const list_builder &)
     {
         detail::for_each_port_operator< typename list_builder::as_cons, set_bits, tag_port>::operate();
     }
