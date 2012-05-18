@@ -109,6 +109,12 @@ struct concatenate_cons< cons< H, empty_list>, T2>
     typedef cons< H, T2> type;
 };
 
+template<>
+struct concatenate_cons< empty_list, empty_list>
+{
+    typedef empty_list type;
+};
+
 template< PortPlaceholder port_, uint8_t bit_>
 struct pin_definition
 {

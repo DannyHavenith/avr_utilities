@@ -66,7 +66,7 @@ namespace init_devices
     template< typename device_cons>
     inline extern void init( const device_cons &)
     {
-        output_initializer<device_cons>()( pin_definitions::empty_list());
+        output_initializer<typename device_cons::as_cons>()( pin_definitions::empty_list());
     }
 }
 #endif /* INIT_DEVICES_HPP_ */

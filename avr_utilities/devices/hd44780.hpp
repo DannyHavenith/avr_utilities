@@ -119,6 +119,11 @@ public:
         command_out( display_control( true, true, false));
     }
 
+    static void cls()
+    {
+        command_out( commands::clr());
+    }
+
     static void string_out( const char *string)
     {
         while (*string) data_out( *string++);
