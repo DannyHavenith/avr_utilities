@@ -13,9 +13,31 @@
 namespace boxtel_packets
 {
 /**
- * Boxtel packet transmitter.
+ * Class that sends data to the serial port in boxtel-encoded format.
  *
- * This class handles the transmission of Boxtel-encoded packets.
+ * Boxtel encoding sends each byte of data as two bytes: one byte with the even bits and one byte with the odd bits.
+ * The 'unused' bits in each byte contain the complement of the used bits. That way, boxtel-encoded data holds at most
+ * two consecutive bits with the same value.
+ *
+ * Boxtel coding is suited for communications over unreliable media that require a certain frequency of bit-changes,
+ * such as 433Mhz transmitters.
+ *
+ * To use this class, an application should:
+ * - initialize the serial port in the usual way
+ * - create an instance of this class.
+ * - implement a UDRE-interrupt handler, that calls this class' uart_empty_interrupt member function, for instance as follows:
+ * \code
+ *  /// Data register empty interrupt
+ *  ISR( USART_UDRE_vect)
+ *  {
+ *      my_transmitter.uart_empty_interrupt();
+ *  }
+ * \endcode
+ *
+ * After this has been done, an application can prepare messages to be send by calling the append member function and when finished,
+ * should call the commit member function. After commit has been called, the appended data will be send in a packet as described in
+ * the \see uart_empty_interrupt function.
+ *
  * The class relies on the application program to make sure that uart_empty_interrupt is called whenever
  * the UART data register is empty, this could be done by calling that function from the UDRE interrupt or
  * after polling the UDRE flag.
@@ -52,11 +74,24 @@ public:
     {
         buffer.reset_tentative();
     }
+
+    /**
+     * Offer a byte for tentative write.
+     *
+     * Note that nothing is transmitted until commit is called.
+     * Typically an application will add one logical 'packet' of byte data using this function and the call commit.
+     */
     bool append( uint8_t byte) volatile
     {
         return buffer.write_tentative( byte);
     }
 
+    /**
+     * Offer a 16-bit word for tentative write. This word will be added in big-endian format to the buffer for transmit.
+     *
+     * Note that nothing is transmitted until commit is called.
+     * Typically an application will add one logical 'packet' of data using this function and the call commit.
+     */
     bool append( uint16_t word) volatile
     {
         bool result = buffer.write_tentative( word >> 8);
@@ -65,10 +100,19 @@ public:
 
     /**
      * This function must be called by the application program whenever the UART data register is empty.
-     * Normally, this is done from the UDRE-interrupt.
+     * Normally, this is done from the UDRE-interrupt, for example as follows:
      *
-     * This function implements a simple state machine that sends packets
-     * the packets consist of:
+     * \code
+     *  /// Data register empty interrupt
+     *  ISR( USART_UDRE_vect)
+     *  {
+     *      my_transmitter.uart_empty_interrupt();
+     *  }
+     * \endcode
+     *
+     *
+     * This function implements a simple state machine that sends packets.
+     * The packets consist of:
      * - n (n >= 1) preamble bytes
      * - end-of-preamble (0x55)
      * - an address-nibble
@@ -76,7 +120,7 @@ public:
      * - at most 16 bytes of data
      *
      * Each byte is sent as a boxtel-encoded word of 16 bits. The address nibble is sent as a specially coded boxtel-nibble.
-     * see boxtel_odd, boxtel_even and boxtel_nibble.
+     * see transmitter::boxtel_odd, boxtel_even and boxtel_nibble.
      *
      */
     void uart_empty_interrupt() volatile
@@ -159,7 +203,7 @@ public:
             }
             break;
         default:
-            /// do nothing
+            // do nothing
             break;
         }
     }
