@@ -109,6 +109,12 @@ struct concatenate_cons< cons< H, empty_list>, T2>
     typedef cons< H, T2> type;
 };
 
+template<>
+struct concatenate_cons< empty_list, empty_list>
+{
+    typedef empty_list type;
+};
+
 template< PortPlaceholder port_, uint8_t bit_>
 struct pin_definition
 {
@@ -459,12 +465,12 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     pin_definitions::pin_definition< pin_definitions::port_##p_, bit_>
 
 #define DEFINE_PIN( name_, p_, bit_) \
-	__attribute__((unused)) PIN_TYPE( p_, bit_)  name_ ;
+	PIN_TYPE( p_, bit_)  name_ ;
 
 #define PIN_GROUP_TYPE( p_, first_bit_, bit_count_) \
     pin_definitions::pin_group< pin_definitions::port_##p_, first_bit_, bit_count_>
 
 #define DEFINE_PIN_GROUP( name_, p_, first_bit_, bit_count_) \
-	__attribute__((unused)) PIN_GROUP_TYPE( p_, first_bit_, bit_count_) name_;
+	PIN_GROUP_TYPE( p_, first_bit_, bit_count_) name_;
 
 #endif //PIN_DEFINITIONS_HPP_
