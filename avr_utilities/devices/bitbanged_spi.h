@@ -84,6 +84,13 @@ public:
         }
     }
 
+    /// transmit a 16 bit value, msb first
+    static void transmit( uint16_t value)
+    {
+    	exchange_byte( value >> 8);
+    	exchange_byte( value & 0xff);
+    }
+
     // transmit a zero-terminated string of characters.
     static void transmit( const char *text)
     {
