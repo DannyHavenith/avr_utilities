@@ -1,7 +1,7 @@
 #ifndef ROUND_ROBIN_BUFFER_H
 #define ROUND_ROBIN_BUFFER_H
 
-#include "stdint.h"
+#include <stdint.h>
 
 template<uint8_t buffer_size = 64, typename datatype = uint8_t>
 struct round_robin_buffer
@@ -71,19 +71,31 @@ public:
     /// read a value from the queue
     bool read(  value_type *value) volatile
     {
+        if (get_first( value))
+        {
+            read_index = (read_index + 1) % buffer_size;
+ 			is_full = false;
+ 
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    bool get_first( value_type *value) const volatile
+    {
         if (read_index == write_index && !is_full)
         {
             return false;
         }
         else
         {
-            //cli();
             *value = buffer[read_index];
-            read_index = (read_index + 1) % buffer_size;
-            is_full = false;
             return true;
-            //sei();
         }
+
     }
 
     /// wait for a value and read it.
