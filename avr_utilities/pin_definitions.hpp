@@ -13,8 +13,12 @@
 
 #if !defined(PIN_DEFINITIONS_HPP_)
 #define PIN_DEFINITIONS_HPP_
+
+
 #include <stdint.h>  // including a std C header in an obvious C++ header file. hmm.
 #include <avr/io.h>
+
+#define PIN_DEF_ALWAYS_INLINE __attribute__((always_inline))
 
 namespace pin_definitions
 {
@@ -422,7 +426,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     /// set the given bits to 1, this changes the output ports
     /// See also init_as_output.
     template< typename list_builder>
-    inline extern void set( const list_builder &)
+    inline PIN_DEF_ALWAYS_INLINE void set( const list_builder &)
     {
         detail::for_each_port_operator< typename list_builder::as_cons, set_bits, tag_port>::operate();
     }
@@ -430,7 +434,7 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     /// resets the given bits to zero.
     /// See also init_as_output.
     template< typename list_builder>
-    inline void reset( const list_builder &)
+    inline PIN_DEF_ALWAYS_INLINE void reset( const list_builder &)
     {
         detail::for_each_port_operator< typename list_builder::as_cons, reset_bits, tag_port>::operate();
     }
@@ -442,6 +446,15 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     	uint8_t shifted = (value << pins_type::shift) & pins_type::mask;
     	volatile uint8_t &port = get_port<pins_type::port>( tag_port());
     	port = (port & ~pins_type::mask) | shifted;
+    }
+
+    /// overload of the write function for single pins.
+    /// This helps the optimizer to create the shortest code possible for single pin writes.
+    template< PortPlaceholder port_, uint8_t bit_>
+    inline void write( const pin_definition<port_, bit_> pin, uint8_t value)
+    {
+    	if (value) set( pin);
+    	else reset(pin);
     }
 
     /// read a value from the given input pin or pin-group
