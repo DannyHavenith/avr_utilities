@@ -431,6 +431,16 @@ inline volatile uint8_t &get_port( const port_tag &tag)
         detail::for_each_port_operator< typename list_builder::as_cons, set_bits, tag_port>::operate();
     }
 
+    /// Toggle all the given output pins, or pin groups.
+    /// This function uses the little known fact that writing a 1 to any bit of a PINx register will
+    /// toggle the corresponding PORTx bits.
+    /// For input ports this will have the effect of toggling the pull-up resistor.
+    template< typename list_builder>
+    inline PIN_DEF_ALWAYS_INLINE void toggle( const list_builder &)
+    {
+        detail::for_each_port_operator< typename list_builder::as_cons, assign, tag_pin>::operate();
+    }
+
     /// resets the given bits to zero.
     /// See also init_as_output.
     template< typename list_builder>
