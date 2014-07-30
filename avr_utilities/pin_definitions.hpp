@@ -38,6 +38,7 @@ namespace pin_definitions
     struct tag_pin  {};
     struct tag_ddr  {};
 
+    /// traits template that for a given PortPlaceholder returns the port, pin or ddr register
     template< PortPlaceholder port>
     struct port_traits
     {
@@ -84,7 +85,9 @@ namespace pin_definitions
 // typedefs for a simple list-type
 struct empty_list {};
 
-/// a set of pins or pin groups
+/// Implementation of a simple cons list.
+/// A cons lists consists of a single element, the head of the list and
+/// another cons list, called tail, which contains the rest of the list.
 template< typename head_, typename tail_ = empty_list>
 struct cons
 {
@@ -94,31 +97,11 @@ struct cons
     typedef cons< head_, tail_> as_cons;
 };
 
-// meta-function to concatenate two cons lists into a single cons list.
-template< typename H, typename T>
-struct concatenate_cons
-{
-    typedef cons< H, T> type;
-};
-
-template< typename H1, typename T1, typename T2>
-struct concatenate_cons< cons< H1, T1>, T2>
-{
-    typedef typename concatenate_cons< T1, cons<H1, T2> >::type type;
-};
-
-template< typename H, typename T2>
-struct concatenate_cons< cons< H, empty_list>, T2>
-{
-    typedef cons< H, T2> type;
-};
-
-template<>
-struct concatenate_cons< empty_list, empty_list>
-{
-    typedef empty_list type;
-};
-
+/// This type defines a pin. The type contains information about the port and the bit number within that port.
+/// By declaring a variable of this type, you can give a name to one specific bit of one port, e.g.
+/// @code
+///     pin_definition< Port_B, 4> led1; // led 1 is attached to pin B4
+/// @endcode.
 template< PortPlaceholder port_, uint8_t bit_>
 struct pin_definition
 {
