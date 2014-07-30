@@ -26,15 +26,8 @@ private:
         uint8_t receive = 0;
         for (uint8_t mask = 0x80; mask; mask >>= 1)
         {
-            if (out & mask)
-            {
-                set( pins.mosi);
-            }
-            else
-            {
-                reset( pins.mosi);
-            }
-            set( pins.clk);
+        	write( pins.mosi, out&mask);
+        	set( pins.clk);
             if (is_set( pins.miso))
             {
                 receive |= mask;
