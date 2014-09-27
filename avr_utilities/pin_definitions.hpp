@@ -467,16 +467,22 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     
 }
 
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+
 #define PIN_TYPE( p_, bit_) \
     pin_definitions::pin_definition< pin_definitions::port_##p_, bit_>
 
 #define DECLARE_PIN( name_, p_, bit_) \
-	PIN_TYPE( p_, bit_)  name_ __attribute__((unused));
+	PIN_TYPE( p_, bit_) __attribute__((unused)) name_ ;
 
 #define PIN_GROUP_TYPE( p_, first_bit_, bit_count_) \
     pin_definitions::pin_group< pin_definitions::port_##p_, first_bit_, bit_count_>
 
 #define DECLARE_PIN_GROUP( name_, p_, first_bit_, bit_count_) \
-	PIN_GROUP_TYPE( p_, first_bit_, bit_count_) name_ __attribute__((unused));
+	PIN_GROUP_TYPE( p_, first_bit_, bit_count_) __attribute__((unused)) name_ ;
+
+#pragma GCC diagnostic pop
 
 #endif //PIN_DEFINITIONS_HPP_

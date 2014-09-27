@@ -81,17 +81,16 @@ inline byte dd_addr( byte addr)
 
 }
 
-template< typename pin_e, typename pin_rw, typename pin_rs, typename data_pins>
+template< typename pins_type>
 class lcd
 {
 public:
 
-    template<typename OutputInitializer>
-    static inline void init( const OutputInitializer &outputs)
+    static inline void init( )
     {
         using namespace commands;
-        outputs( e | rw | rs | data);
-        reset( rs);
+        make_output( pins.e | pins.rw | pins.rs | pins.data);
+        reset( pins.rs);
 
         // following the Hitachi datasheet
         // HD44780U (LCD-II)/ADE-207-272(Z)/'99.9/rev 0.0
@@ -114,14 +113,19 @@ public:
         // now we can send 4 bit commands (one nibble at a time).
         command_out( function_set( false, true, false));
         command_out( display_control( false, false, false));
+
+
         command_out( clr());
         command_out( entry_mode( true, false));
-        command_out( display_control( true, true, false));
+        command_out( display_control( true, false, false));
+        command_out( function_set( false, true, false));
     }
 
     static void cls()
     {
         command_out( commands::clr());
+        command_out( commands::home());
+        command_out( commands::dd_addr(0));
     }
 
     static void string_out( const char *string)
@@ -151,14 +155,10 @@ public:
 
 private:
 
-    // pin definitions.
-    static const pin_e    e;
-    static const pin_rw   rw;
-    static const pin_rs   rs;
-    static const data_pins data;
 
     static const byte BUSY_FLAG = 0x80;
 
+    static pins_type pins;
     static void wait_ready()
     {
         while (command_in() & BUSY_FLAG);
@@ -168,11 +168,11 @@ private:
     {
         if (set_rs)
         {
-            set( rs);
+            set( pins.rs);
         }
         else
         {
-            reset( rs);
+            reset( pins.rs);
         }
         outnibble( byte >> 4);
         outnibble( byte & 0x0f);
@@ -181,22 +181,22 @@ private:
 
     static void outnibble( byte nibble)
     {
-        reset( rw);
-        write( data, nibble);
-        set( e);
+        reset( pins.rw);
+        write( pins.data, nibble);
+        set( pins.e);
         delay_500ns();
-        reset( e);
+        reset( pins.e);
     }
 
     static byte inbyte( bool set_rs)
     {
         if (set_rs)
         {
-            set( rs);
+            set( pins.rs);
         }
         else
         {
-            reset( rs);
+            reset( pins.rs);
         }
         byte result =innibble() << 4;
         return result | innibble();
@@ -205,13 +205,13 @@ private:
     static byte innibble()
     {
         byte result;
-        set( rw);
-        make_input( data);
-        set( e);
+        set( pins.rw);
+        make_input( pins.data);
+        set( pins.e);
         delay_500ns();
-        result = read( data);
-        reset( e);
-        make_output( data);
+        result = read( pins.data);
+        reset( pins.e);
+        make_output( pins.data);
         return result;
     }
 
