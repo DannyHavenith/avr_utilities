@@ -24,6 +24,7 @@ namespace pin_definitions
 {
 
     enum PortPlaceholder {
+        port_Null,
         port_A,
         port_B,
         port_C,
@@ -38,6 +39,10 @@ namespace pin_definitions
     struct tag_pin  {};
     struct tag_ddr  {};
 
+    /// If this type is substituted for a real port, any operation on it will result in no
+    /// action at all.
+    struct null_port {};
+
     /// traits template that for a given PortPlaceholder returns the port, pin or ddr register
     template< PortPlaceholder port>
     struct port_traits
@@ -47,6 +52,18 @@ namespace pin_definitions
         // you may be using a port that has not been defined for your mcu (like port A on an atmega88).
         template<typename T>
         static void get( const T &){}
+    };
+
+    template< PortPlaceholder port>
+    struct port_type
+    {
+        typedef volatile uint8_t &type;
+    };
+
+    template<>
+    struct port_type<port_Null>
+    {
+        typedef null_port type;
     };
 
 #define DECLARE_PORT_TRAITS( p_)                                    \
@@ -79,6 +96,15 @@ namespace pin_definitions
     DECLARE_PORT_TRAITS( F)
 #endif
 
+
+/// specialisation for null-port. Will always return the null-port type.
+template<>
+struct port_traits<port_Null>
+{
+    template<typename whatever_tag>
+    static null_port get( const whatever_tag &) { return null_port();}
+};
+
 #undef DECLARE_PORT_TRAITS
 
 
@@ -109,20 +135,22 @@ struct pin_definition
     static const PortPlaceholder    port = port_;
     static const uint8_t            bit  = bit_;
     static const uint8_t            mask = 1 << bit_;
-	static const uint8_t 			shift = bit_;
+    static const uint8_t 			shift = bit_;
     typedef cons< pin_definition< port_, bit_>, empty_list> as_cons;
 };
 
+typedef pin_definition<port_Null, 0> null_pin_type;
+
 /// a contiguous set of bits in one port
-template< PortPlaceholder port_, 
+template< PortPlaceholder port_,
             uint8_t first_bit,
-			uint8_t bits
+            uint8_t bits
             >
 struct pin_group
 {
     static const PortPlaceholder    port = port_;
     static const uint8_t            mask = (0xff >> (8 - bits)) << first_bit;
-	static const uint8_t            shift = first_bit;
+    static const uint8_t            shift = first_bit;
 
     typedef cons< pin_group< port_, first_bit, bits>, empty_list> as_cons;
 };
@@ -142,13 +170,13 @@ struct false_type { typedef false_type type;};
 /// generic if-metafunction. returns the 'if_true' type if the condition
 /// is of type true_type.
 template< typename condition, typename if_true, typename if_false>
-struct if_ 
+struct if_
 {
     typedef if_false type;
 };
 
 template< typename if_true, typename if_false>
-struct if_< true_type, if_true, if_false> 
+struct if_< true_type, if_true, if_false>
 {
     typedef if_true type;
 };
@@ -206,8 +234,8 @@ struct null_mask
 template< PortPlaceholder port, typename list>
 struct mask_for_port
 {
-    static const uint8_t value = 
-        if_< 
+    static const uint8_t value =
+        if_<
             typename is_same_port<list::head::port, port>::type,
             typename list::head,
             null_mask
@@ -224,7 +252,7 @@ struct mask_for_port< port, empty_list>
 
 
 template< PortPlaceholder port, typename port_tag>
-inline volatile uint8_t &get_port( const port_tag &tag)
+inline typename port_type<port>::type get_port( const port_tag &tag)
 {
     // if you get a compile error complaining that get() returns void,
     // you may be using a port that has not been defined for your mcu (like port A on an atmega88).
@@ -232,12 +260,12 @@ inline volatile uint8_t &get_port( const port_tag &tag)
 }
 
 
-	/// this helper class is used to construct cons lists.
+    /// this helper class is used to construct cons lists.
     template< typename head, typename tail = empty_list>
     struct cons_builder
     {
         typedef cons< head, tail> as_cons;
-        
+
         template< typename new_head>
         cons_builder< new_head, as_cons > operator()( const new_head &) const
         {
@@ -355,6 +383,11 @@ inline volatile uint8_t &get_port( const port_tag &tag)
         {
             reg = value;
         }
+
+        void operator()( const null_port &, uint8_t ) const
+        {
+            // do nothing;
+        }
     };
 
     /// This operator will logical-or the value with the given register.
@@ -364,6 +397,11 @@ inline volatile uint8_t &get_port( const port_tag &tag)
         void operator()( volatile uint8_t &reg, uint8_t value) const
         {
             reg |= value;
+        }
+
+        void operator()( const null_port &, uint8_t ) const
+        {
+            // do nothing;
         }
     };
 
@@ -375,11 +413,16 @@ inline volatile uint8_t &get_port( const port_tag &tag)
         {
             reg &= ~value;
         }
+
+        void operator()( const null_port &, uint8_t ) const
+        {
+            // do nothing;
+        }
     };
 
     // the following functions use pin definitions to perform common tasks
 
-    /// initialize all ports of the given pin definitions, turning all given pins to output and making all 
+    /// initialize all ports of the given pin definitions, turning all given pins to output and making all
     /// bits that are not mentioned in those ports inputs.
     /// This template receives a list_builder, or list as template argument. A list contains (port, bits)-pairs
     /// and this function will combine all bits for each port mentioned in the list and then assign the accumulated
@@ -436,9 +479,9 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     template< typename pins_type>
     inline void write( const pins_type &, uint8_t value)
     {
-    	uint8_t shifted = (value << pins_type::shift) & pins_type::mask;
-    	volatile uint8_t &port = get_port<pins_type::port>( tag_port());
-    	port = (port & ~pins_type::mask) | shifted;
+        uint8_t shifted = (value << pins_type::shift) & pins_type::mask;
+        volatile uint8_t &port = get_port<pins_type::port>( tag_port());
+        port = (port & ~pins_type::mask) | shifted;
     }
 
     /// overload of the write function for single pins.
@@ -446,25 +489,35 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     template< PortPlaceholder port_, uint8_t bit_>
     inline void write( const pin_definition<port_, bit_> pin, uint8_t value)
     {
-    	if (value) set( pin);
-    	else reset(pin);
+        if (value) set( pin);
+        else reset(pin);
     }
 
     /// read a value from the given input pin or pin-group
     template< typename pins_type>
     inline uint8_t read( const pins_type &)
     {
-    	return (get_port<pins_type::port>( tag_pin()) & pins_type::mask)
-    				>> pins_type::shift;
+        return (get_port<pins_type::port>( tag_pin()) & pins_type::mask)
+                    >> pins_type::shift;
+    }
+
+    inline uint8_t read( const null_pin_type &)
+    {
+        return 0;
     }
 
     /// returns true iff at least one of the bits in the pin-definition or pin-group is set.
     template< typename pins_type>
     inline bool is_set( const pins_type &)
     {
-    	return (get_port<pins_type::port>( tag_pin()) & pins_type::mask) != 0;
+        return (get_port<pins_type::port>( tag_pin()) & pins_type::mask) != 0;
     }
-    
+
+    inline bool is_set( const null_pin_type &)
+    {
+        return false;
+    }
+
 }
 
 
@@ -475,13 +528,13 @@ inline volatile uint8_t &get_port( const port_tag &tag)
     pin_definitions::pin_definition< pin_definitions::port_##p_, bit_>
 
 #define DECLARE_PIN( name_, p_, bit_) \
-	PIN_TYPE( p_, bit_) __attribute__((unused)) name_ ;
+    PIN_TYPE( p_, bit_) __attribute__((unused)) name_ ;
 
 #define PIN_GROUP_TYPE( p_, first_bit_, bit_count_) \
     pin_definitions::pin_group< pin_definitions::port_##p_, first_bit_, bit_count_>
 
 #define DECLARE_PIN_GROUP( name_, p_, first_bit_, bit_count_) \
-	PIN_GROUP_TYPE( p_, first_bit_, bit_count_) __attribute__((unused)) name_ ;
+    PIN_GROUP_TYPE( p_, first_bit_, bit_count_) __attribute__((unused)) name_ ;
 
 #pragma GCC diagnostic pop
 
