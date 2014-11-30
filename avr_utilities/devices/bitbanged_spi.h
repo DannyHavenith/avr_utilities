@@ -9,12 +9,31 @@
 #define BITBANGED_SPI_H_
 #include "avr_utilities/pin_definitions.hpp"
 
+// direction strategies for spi: these strategies determine whether the msbit is transmitted/received first
+// or the lsbit.
+
+/// Strategy pattern for the spi device.
+/// This one will make the spi device transmit/recieve the most significant bit first.
+struct msb_first_direction
+{
+    static uint8_t first_mask() { return 0x80;}
+    static void advance( uint8_t &mask) { mask >>= 1;}
+};
+
+/// Strategy pattern for the spi device.
+/// This one will make the spi device transmit/recieve the least significant bit first.
+struct lsb_first_direction
+{
+    static uint8_t first_mask() { return 0x01;}
+    static void advance( uint8_t &mask) { mask <<= 1;}
+};
+
 /// simple SPI device that 'manually' controls SPI lines.
 /// This device can be used to send and receive data using the SPI protocol. Since it does not
 /// use any SPI hardware or SPI interrupts it can be configured to work on any combination of pins.
 /// Note that this device does not control the Chip Select (CS) pin. It is up to the user of this class
 /// to select the right device or devices before sending or receiving data.
-template< typename pin_definitions>
+template< typename pin_definitions, typename direction = msb_first_direction>
 struct bitbanged_spi
 {
 private:
@@ -24,7 +43,7 @@ private:
     static uint8_t exchange_byte( uint8_t out)
     {
         uint8_t receive = 0;
-        for (uint8_t mask = 0x80; mask; mask >>= 1)
+        for (uint8_t mask = direction::first_mask(); mask; direction::advance( mask))
         {
         	write( pins.mosi, out&mask);
         	set( pins.clk);
