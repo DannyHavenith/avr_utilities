@@ -128,9 +128,10 @@ public:
         command_out( commands::dd_addr(0));
     }
 
-    static void string_out( const char *string)
+    static const char* string_out( const char *string)
     {
         while (*string) data_out( *string++);
+        return string;
     }
 
     static void data_out( byte data)__attribute__((always_inline))
