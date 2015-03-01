@@ -475,6 +475,13 @@ inline typename port_type<port>::type get_port( const port_tag &tag)
         detail::for_each_port_operator< typename list_builder::as_cons, reset_bits, tag_port>::operate();
     }
 
+    /// clear() is an alias for reset().
+    template< typename list_builder>
+    inline PIN_DEF_ALWAYS_INLINE void clear( const list_builder &pins)
+    {
+        reset( pins);
+    }
+
     /// write a value to the given output pin or pin-group.
     template< typename pins_type>
     inline void write( const pins_type &, uint8_t value)
