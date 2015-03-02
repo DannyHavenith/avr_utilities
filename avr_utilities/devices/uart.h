@@ -112,6 +112,7 @@ namespace serial
                 // re-enable interrupt
                 UCSR0B |= (1 << UDRIE0);
                 UDR0 = output_buffer.read_w(); // start the UART and its interrupts
+                idle = false;
             }
             sei();
         }
@@ -148,7 +149,6 @@ namespace serial
 
         bool idle;
         round_robin_buffer<output_buffer_size> output_buffer;
-
     };
 }
 #endif /* AVR_UTILITIES_DEVICES_UART_H_ */
