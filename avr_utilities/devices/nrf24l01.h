@@ -22,6 +22,11 @@ private:
 
 public:
 
+    nrf24l01()
+    {
+        init();
+    }
+
     static void init()
     {
         spi::init();
@@ -68,9 +73,21 @@ public:
         return set_receive_address( address, size);
     }
 
+    template<uint8_t size>
+    static uint8_t set_receive_address( const char (&address)[size])
+    {
+        return set_receive_address( reinterpret_cast<const uint8_t *>( &address[0]), size-1);
+    }
+
     static uint8_t set_transmit_address( const uint8_t *address, uint8_t size)
     {
         return write_register( TX_ADDR, address, size);
+    }
+
+    template<uint8_t size>
+    static uint8_t set_transmit_address( const char (&address)[size])
+    {
+        return set_transmit_address( reinterpret_cast<const uint8_t *>( &address[0]), size-1);
     }
 
     template< uint8_t size>
@@ -84,6 +101,29 @@ public:
         set( pins.ce);
     }
 
+    static void flush_tx()
+    {
+        reset( pins.csn);
+        spi::transmit_receive( FLUSH_TX);
+        set( pins.csn);
+    }
+
+    static void flush_rx()
+    {
+        reset( pins.csn);
+        spi::transmit_receive( FLUSH_RX);
+        set( pins.csn);
+    }
+
+    static uint8_t get_rx_payload_width()
+    {
+        reset( pins.csn);
+        spi::transmit_receive( R_RX_PL_WIDTH);
+        uint8_t result = spi::transmit_receive(0);
+        set( pins.csn);
+        return result;
+    }
+
     static uint8_t get_status()
     {
         reset( pins.csn);
@@ -95,14 +135,13 @@ public:
     static bool ready_to_send()
     {
         uint8_t status = get_status();
-        if(status & (1<<TX_DS))
+        if(status & _BV( TX_FULL))
         {
-            write_register(STATUS,(1<<TX_DS)|(1<<MAX_RT)); // Reset status register
-            return true;
+            return false;
         }
         else
         {
-            return false;
+            return true;
         }
     }
 
@@ -115,23 +154,19 @@ public:
     static bool send( const uint8_t *buffer, uint8_t buffer_size)
     {
         reset( pins.ce);
-
-
-//        reset( pins.csn);
-//        spi::transmit_receive( FLUSH_TX);
-//        set( pins.csn);
-
         reset( pins.csn);
+
         uint8_t status = spi::transmit_receive( W_TX_PAYLOAD);
         if ( status & _BV( TX_FULL))
         {
+            set( pins.csn);
             return false;
         }
 
         spi::transmit( buffer, buffer_size);
         set( pins.csn);
         set( pins.ce);
-        _delay_us( 10);
+        _delay_us( 11);
         reset( pins.ce);
         return true;
     }
@@ -147,7 +182,7 @@ public:
     template< uint8_t size>
     static void send( const char (&buffer)[size])
     {
-        send( reinterpret_cast<const uint8_t *>(buffer), size);
+        send( reinterpret_cast<const uint8_t *>(buffer), size-1);
     }
 
 };

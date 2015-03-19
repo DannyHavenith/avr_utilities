@@ -59,6 +59,7 @@ public:
     static void init()
     {
         reset( pins.clk);
+        set( pins.miso); // pull-up
         make_output( pins.mosi | pins.clk);
     }
 

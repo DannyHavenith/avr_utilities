@@ -24,6 +24,20 @@
     $Id$
 */
 
+template< typename mapped_bit>
+struct assigned_bit
+{
+    uint8_t value;
+};
+
+template< uint8_t reg, uint8_t mask> struct mapped_bit
+{
+    assigned_bit< mapped_bit<reg, mask> > operator=(uint8_t value) const
+    {
+        return assigned_bit<mapped_bit<reg,mask> >( value);
+    }
+};
+
 /* Memory Map */
 #define CONFIG      0x00
 #define EN_AA       0x01
@@ -52,7 +66,11 @@
 
 /* Bit Mnemonics */
 #define MASK_RX_DR  6
+mapped_bit< CONFIG, MASK_RX_DR> mask_rx_dr;
+
 #define MASK_TX_DS  5
+mapped_bit< CONFIG, MASK_TX_DS> mask_tx_ds;
+
 #define MASK_MAX_RT 4
 #define EN_CRC      3
 #define CRCO        2
@@ -74,7 +92,8 @@
 #define ARD         4
 #define ARC         0
 #define PLL_LOCK    4
-#define RF_DR       3
+#define RF_DR_LOW   5
+#define RF_DR_HIGH  3
 #define RF_PWR      1
 #define LNA_HCURR   0        
 #define RX_DR       6
@@ -95,6 +114,7 @@
 #define W_REGISTER    0x20
 #define REGISTER_MASK 0x1F
 #define R_RX_PAYLOAD  0x61
+#define R_RX_PL_WIDTH 0x60
 #define W_TX_PAYLOAD  0xA0
 #define FLUSH_TX      0xE1
 #define FLUSH_RX      0xE2
