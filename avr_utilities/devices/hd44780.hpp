@@ -86,6 +86,11 @@ class lcd
 {
 public:
 
+    lcd()
+    {
+        init();
+    }
+
     static inline void init( )
     {
         using namespace commands;

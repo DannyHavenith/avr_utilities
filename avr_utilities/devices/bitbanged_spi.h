@@ -56,6 +56,12 @@ private:
         return receive;
     }
 public:
+    /// If you instantiate an object of this type, it will automatically perform the init call.
+    bitbanged_spi()
+    {
+        init();
+    }
+
     static void init()
     {
         reset( pins.clk);
