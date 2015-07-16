@@ -19,25 +19,29 @@
 #define IMPLEMENT_UART_INTERRUPT( uart_)            \
     ISR( USART_UDRE_vect)                           \
     {                                               \
-        uart_.uart_empty_interrupt();               \
+        uart_.output_buffer_empty_interrupt();      \
+    }                                               \
+    ISR( USART_RX_vect)                             \
+    {                                               \
+        uart_.input_buffer_full_interrupt();        \
     }                                               \
     /**/
 
 namespace serial
 {
     /**
-     * This class eases using the AVRs UART. It provides buffered output (input to be implemented later).
+     * This class eases using the AVRs UART. It provides buffered output and input.
      *
      */
-    template< uint8_t output_buffer_size = 32>
+    template< uint8_t output_buffer_size = 32, uint8_t input_buffer_size = output_buffer_size>
     class uart
     {
     public:
         uart( uint32_t baudrate)
             :idle(true)
         {
-            init();
             set_baudrate( baudrate);
+            init();
         }
 
         static void set_baudrate( uint32_t baudrate)
@@ -51,13 +55,20 @@ namespace serial
 
         static void init()
         {
+            UCSR0A = 0;
+
             // enable TX
             // enable UDR-empty interrupt
-            UCSR0B = (1<<TXEN0) | (1 << UDRIE0);
+            // enable serial input interrupt and serial input.
+            UCSR0B = _BV( RXCIE0) | _BV( RXEN0) | _BV( TXEN0) | _BV( UDRIE0);
 
             // 8-bits data, no parity, 1 stopbit (8n1)
             UCSR0C = _BV( UCSZ01) | _BV( UCSZ00);
+
+            // interrupts must be enabled for serial input to work.
+            sei();
         }
+
         /**
          * This function must be called by the application program whenever the UART data register is empty.
          * Normally, this is done from the UDRE-interrupt, for example as follows:
@@ -70,9 +81,8 @@ namespace serial
          *  }
          * \endcode
          *
-         *
          */
-        void uart_empty_interrupt() volatile
+        void output_buffer_empty_interrupt() volatile
         {
             uint8_t byte = 0;
 
@@ -90,6 +100,13 @@ namespace serial
             }
         }
 
+        void input_buffer_full_interrupt() volatile
+        {
+            register uint8_t in = UDR0;
+            input_buffer.write_tentative(in);
+            input_buffer.commit();
+        }
+
         void send( const char *message) volatile
         {
             while (*message)
@@ -98,6 +115,23 @@ namespace serial
                 ++message;
             }
             commit();
+        }
+
+        void send( uint8_t value)
+        {
+            append( value);
+            commit();
+        }
+
+        bool data_available() const volatile
+        {
+            return !input_buffer.empty();
+        }
+
+        // get one byte from the uart.
+        uint8_t get() volatile
+        {
+            return input_buffer.read_w();
         }
 
     private:
@@ -146,9 +180,9 @@ namespace serial
             return result && output_buffer.write_tentative( word);
         }
 
-
         bool idle;
         round_robin_buffer<output_buffer_size> output_buffer;
+        round_robin_buffer<input_buffer_size> input_buffer;
     };
 }
 #endif /* AVR_UTILITIES_DEVICES_UART_H_ */
