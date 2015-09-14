@@ -111,4 +111,9 @@ void example()
 }
 ```
 
+About the mini-boost distribution
+---------------------------------
+Originally, this library re-implemented small parts of mpl and preprocessor. Now, this
+library contains, in sub-directory 'boost' a subset of boost libraries. See the boost/README.md for more information.
+
 

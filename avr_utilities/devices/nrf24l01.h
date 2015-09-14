@@ -18,7 +18,7 @@ class nrf24l01
 {
 private:
     static pin_definitions pins;
-    typedef spi_device spi;
+    static spi_device spi;
 
 public:
 
@@ -29,35 +29,35 @@ public:
 
     static void init()
     {
-        spi::init();
-        reset( pins.ce);
+        spi_device::init();
+        clear( pins.ce);
         set( pins.csn);
         make_output( pins.ce | pins.csn);
     }
 
     static uint8_t write_register( uint8_t reg, uint8_t value)
     {
-        reset( pins.csn);
-        uint8_t status = spi::transmit_receive( W_REGISTER | (REGISTER_MASK & reg));
-        spi::transmit_receive( value);
+        clear( pins.csn);
+        uint8_t status = spi.transmit_receive( W_REGISTER | (REGISTER_MASK & reg));
+        spi.transmit_receive( value);
         set( pins.csn);
         return status;
     }
 
     static uint8_t read_register( uint8_t reg)
     {
-        reset( pins.csn);
-        spi::transmit_receive( R_REGISTER | (REGISTER_MASK & reg));
-        uint8_t result = spi::transmit_receive(0);
+        clear( pins.csn);
+        spi.transmit_receive( R_REGISTER | (REGISTER_MASK & reg));
+        uint8_t result = spi.transmit_receive(0);
         set( pins.csn);
         return result;
     }
 
     static uint8_t write_register( uint8_t reg, const uint8_t *values, uint8_t size)
     {
-        reset( pins.csn);
-        uint8_t status = spi::transmit_receive( W_REGISTER | (REGISTER_MASK & reg));
-        spi::transmit( values, size);
+        clear( pins.csn);
+        uint8_t status = spi.transmit_receive( W_REGISTER | (REGISTER_MASK & reg));
+        spi.transmit( values, size);
         set( pins.csn);
         return status;
     }
@@ -103,31 +103,31 @@ public:
 
     static void flush_tx()
     {
-        reset( pins.csn);
-        spi::transmit_receive( FLUSH_TX);
+        clear( pins.csn);
+        spi.transmit_receive( FLUSH_TX);
         set( pins.csn);
     }
 
     static void flush_rx()
     {
-        reset( pins.csn);
-        spi::transmit_receive( FLUSH_RX);
+        clear( pins.csn);
+        spi.transmit_receive( FLUSH_RX);
         set( pins.csn);
     }
 
     static uint8_t get_rx_payload_width()
     {
-        reset( pins.csn);
-        spi::transmit_receive( R_RX_PL_WIDTH);
-        uint8_t result = spi::transmit_receive(0);
+        clear( pins.csn);
+        spi.transmit_receive( R_RX_PL_WIDTH);
+        uint8_t result = spi.transmit_receive(0);
         set( pins.csn);
         return result;
     }
 
     static uint8_t get_status()
     {
-        reset( pins.csn);
-        uint8_t status = spi::transmit_receive( 0xff);
+        clear( pins.csn);
+        uint8_t status = spi.transmit_receive( 0xff);
         set( pins.csn);
         return status;
     }
@@ -153,29 +153,29 @@ public:
 
     static bool send( const uint8_t *buffer, uint8_t buffer_size)
     {
-        reset( pins.ce);
-        reset( pins.csn);
+        clear( pins.ce);
+        clear( pins.csn);
 
-        uint8_t status = spi::transmit_receive( W_TX_PAYLOAD);
+        uint8_t status = spi.transmit_receive( W_TX_PAYLOAD);
         if ( status & _BV( TX_FULL))
         {
             set( pins.csn);
             return false;
         }
 
-        spi::transmit( buffer, buffer_size);
+        spi.transmit( buffer, buffer_size);
         set( pins.csn);
         set( pins.ce);
         _delay_us( 11);
-        reset( pins.ce);
+        clear( pins.ce);
         return true;
     }
 
     static void receive( uint8_t *buffer, uint8_t buffer_size)
     {
-        reset( pins.csn);
-        spi::transmit_receive( R_RX_PAYLOAD);
-        spi::receive( buffer, buffer_size);
+        clear( pins.csn);
+        spi.transmit_receive( R_RX_PAYLOAD);
+        spi.receive( buffer, buffer_size);
         set( pins.csn);
     }
 
