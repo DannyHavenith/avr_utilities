@@ -22,37 +22,7 @@
 #include <stdint.h>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/tuple/elem.hpp>
-
-/* A type that holds some bit values and a bit range to which these values should be
- * assigned, AND-ed or OR-ed.
- */
-template< typename mapped_bit>
-struct assigned_bit
-{
-    uint8_t value;
-};
-
-template< uint8_t address>
-struct register_type
-{
-};
-
-template< uint8_t address, typename value_type>
-struct custom_register_type
-{
-};
-
-/**
- * Type that represents a range of bits inside a register
- */
-template< typename reg, uint8_t highest_bit, uint8_t lowest_bit = highest_bit>
-struct mapped_bits
-{
-    assigned_bit< mapped_bits<reg, highest_bit, lowest_bit> > operator=(uint8_t value) const
-    {
-        return assigned_bit<mapped_bits<reg,highest_bit,lowest_bit> >( value);
-    }
-};
+#include "mapped_bits.hpp"
 
 // helper macros for AVRUTIL_SEMI_SEQUENCE_TO_SEQUENCE
 #define AVRUTIL_WRAP_SEQUENCE_0(...)            \
@@ -79,8 +49,8 @@ struct mapped_bits
     /**/
 
 #define AVRUTIL_DECLARE_RANGE( ignored_, regname_, variadic_tuple)          \
-        mapped_bits< regname_, AVRUTIL_RANGE_FROM_VAR_TUPLE variadic_tuple> \
-            AVRUTIL_NAME_FROM_VAR_TUPLE variadic_tuple;                     \
+        bit_range< regname_, AVRUTIL_RANGE_FROM_VAR_TUPLE variadic_tuple> \
+            AVRUTIL_NAME_FROM_VAR_TUPLE variadic_tuple __attribute__((unused))= {};                     \
     /**/
 
 #define AVRUTIL_RANGE_FROM_VAR_TUPLE( name_, ...) __VA_ARGS__

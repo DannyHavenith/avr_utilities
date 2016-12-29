@@ -1,0 +1,14 @@
+//
+//  Copyright (C) 2015 Danny Havenith
+//
+//  Distributed under the Boost Software License, Version 1.0. (See
+//  accompanying file LICENSE_1_0.txt or copy at
+//  http://www.boost.org/LICENSE_1_0.txt)
+//
+#ifndef AVR_UTILITIES_CSTDDEF_
+#define AVR_UTILITIES_CSTDDEF_
+/**
+ * This empty file is here so that boost config will compile on a limited avr-gcc
+ * setup.
+ */
+#endif /* AVR_UTILITIES_CSTDDEF_ */

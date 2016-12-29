@@ -46,9 +46,29 @@ AVRUTIL_DATASHEET_REGISTER(
         (aw, 1, 0)
 )
 
+enum class AutoRetransmitDelay
+{
+    us250  =  0,
+    us500 ,
+    us750 ,
+    us1000,
+    us1250,
+    us1500,
+    us1750,
+    us2000,
+    us2250,
+    us2500,
+    us2750,
+    us3000,
+    us3250,
+    us3500,
+    us3750,
+    us4000,
+};
+
 AVRUTIL_DATASHEET_REGISTER(
     SETUP_RETR, 0x04,
-        (ard, 7, 4)
+        (ard, 7, 4, AutoRetransmitDelay)
         (arc, 3, 0)
 )
 
@@ -87,10 +107,10 @@ AVRUTIL_DATASHEET_REGISTER(
 )
 
 custom_register_type< 0x0a,
-    uint8_t [5]> rx_addr_p0;
+    uint8_t [5]> rx_addr_p0 __attribute__ ((unused));
 
 custom_register_type< 0x0b,
-    uint8_t [5]> rx_addr_p1;
+    uint8_t [5]> rx_addr_p1 __attribute__ ((unused));
 
 AVRUTIL_DATASHEET_REGISTER(
     RX_ADDR_P2, 0x0c,
@@ -113,7 +133,7 @@ AVRUTIL_DATASHEET_REGISTER(
 )
 
 custom_register_type< 0x10,
-    uint8_t [5]> tx_addr;
+    uint8_t [5]> tx_addr  __attribute__ ((unused));
 
 
 AVRUTIL_DATASHEET_REGISTER(
