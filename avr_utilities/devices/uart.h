@@ -69,6 +69,11 @@ namespace serial
             sei();
         }
 
+        static bool is_sending()
+        {
+            return (UCSR0B & _BV(UDRIE0)) != 0;
+        }
+
         /**
          * This function must be called by the application program whenever the UART data register is empty.
          * Normally, this is done from the UDRE-interrupt, for example as follows:
