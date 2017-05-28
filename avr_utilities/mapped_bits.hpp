@@ -28,6 +28,12 @@ struct custom_register_type
 {
 };
 
+/**
+ * Template meta function that defines a default type for bit ranges of specified size.
+ *
+ * If for example, the bit count is 1 then the default value type will be bool, if the bit
+ * count is <=8 then the default value type will be uint8_t, etc.
+ */
 template<unsigned bit_count>
 struct default_value_type
 {

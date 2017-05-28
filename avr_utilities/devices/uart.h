@@ -124,6 +124,12 @@ namespace serial
 
         void send( uint8_t value)
         {
+            while (!append( value)) /*repeat*/;
+            commit();
+        }
+
+        void send( uint16_t value)
+        {
             append( value);
             commit();
         }
@@ -133,10 +139,27 @@ namespace serial
             return !input_buffer.empty();
         }
 
+
         // get one byte from the uart.
         uint8_t get() volatile
         {
             return input_buffer.read_w();
+        }
+
+        // Arduino compatibility functions
+        bool available() const volatile
+        {
+            return data_available();
+        }
+
+        uint8_t read() volatile
+        {
+            return get();
+        }
+
+        void write( uint8_t value)
+        {
+            send( value);
         }
 
     private:
@@ -166,7 +189,7 @@ namespace serial
          * Offer a byte for tentative write.
          *
          * Note that nothing is transmitted until commit is called.
-         * Typically an application will add one logical 'packet' of byte data using this function and the call commit.
+         * Typically an application will add one logical 'packet' of byte data using this function and then call commit.
          */
         bool append( uint8_t byte) volatile
         {
