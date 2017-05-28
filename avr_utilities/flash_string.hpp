@@ -1,16 +1,27 @@
 //
-//  Copyright (C) 2017 Danny Havenith
+// The following code is essentially a copy of a part of Arduino's WString.h, which is
 //
-//  Distributed under the Boost Software License, Version 1.0. (See
-//  accompanying file LICENSE_1_0.txt or copy at
-//  http://www.boost.org/LICENSE_1_0.txt)
+// Copyright (c) 2009-10 Hernando Barragan.  All right reserved.
+// Copyright 2011, Paul Stoffregen, paul@pjrc.com
+//
+// and distributed under LGPL version 2.1 or later
 //
 #ifndef AVR_UTILITIES_FLASH_STRING_HPP_
 #define AVR_UTILITIES_FLASH_STRING_HPP_
+#include <avr/pgmspace.h>
 
 namespace flash_string
 {
-    class placeholder;
+    class helper;
+    inline const helper *as_pstring( const char *ptr)
+    {
+        return reinterpret_cast<const helper *>(ptr);
+    }
+
 }
+
+// I hate to define short macro names because they pollute the global "token space",
+// but at least I'm adding an underscore, which makes me feel a little better.
+#define F_(string_literal) (flash_string::as_pstring(PSTR(string_literal)))
 
 #endif /* AVR_UTILITIES_FLASH_STRING_HPP_ */
