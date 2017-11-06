@@ -109,19 +109,19 @@ namespace {
     constexpr
         command<
             commands::CMD_MQTT_SUBSCRIBE,
-            void ( string, uint8_t)>
+            void ( string topic, uint8_t qos)>
         subscribe;
 
     constexpr
         command<
             commands::CMD_MQTT_SETUP,
-            void ( callback, callback, callback, callback)>
+            void ( callback connected, callback disconnected, callback published, callback data)>
         setup;
 
     constexpr
         command<
             commands::CMD_MQTT_PUBLISH,
-            void ( string, string_with_extra_len, uint8_t, uint8_t)>
+            void ( string topic, string_with_extra_len message, uint8_t qos, bool retain)>
         publish;
     }
 }

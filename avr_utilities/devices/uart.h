@@ -114,6 +114,8 @@ namespace serial
 
         void send( const char *message) volatile
         {
+        	if (not message) return;
+
             while (*message)
             {
                 append( static_cast<uint8_t>(*message));

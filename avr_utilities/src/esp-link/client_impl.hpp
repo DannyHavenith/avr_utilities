@@ -89,7 +89,7 @@ const packet* client::try_receive()
             }
         }
 
-        if (m_buffer_index <= buffer_size)
+        if (m_buffer_index < buffer_size)
         {
             m_buffer[m_buffer_index++] = lastByte;
         }
@@ -472,7 +472,7 @@ uint32_t client::register_callback(callback_type f)
 {
     if (!f) return callbacks_size;
 
-    for (uint8_t count = 0; count < callbacks_size; ++count)
+    for (uint8_t count = 1; count < callbacks_size; ++count)
     {
         if (!m_callbacks[count])
         {

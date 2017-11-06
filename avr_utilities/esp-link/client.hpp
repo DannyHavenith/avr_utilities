@@ -182,11 +182,17 @@ namespace esp_link
         void add_parameter(tag<string_with_extra_len>, const char* string);
 
         // send a parameter of any type T, represented by a value that can be converted
-        // to type T.
+        // to type T. By using the literally_t metafunction, we assure that the actual
+        // argument will be cast to type T before further processing.
         template< typename T>
         void add_parameter( tag<T>,  literally_t<T> value)
         {
             add_parameter( value);
+        }
+
+        void add_parameter( tag<bool>, bool value)
+        {
+        	add_parameter( static_cast<uint8_t>(value?1:0));
         }
 
 
