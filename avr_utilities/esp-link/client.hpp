@@ -90,8 +90,9 @@ namespace esp_link
     {
     public:
 
+    	using uart_type = serial::uart<32, 64>;
         using callback_type = function::function<void (const packet *, uint16_t)>;
-        client( serial::uart<> &uart)
+        client(  uart_type &uart)
         : m_uart{&uart}
         {
         }
@@ -122,6 +123,7 @@ namespace esp_link
         const packet* try_receive();
 
         void log_packet(const esp_link::packet *p);
+        void log_packet( const uint8_t *buffer, uint8_t size) const;
 
 
         void send(const char* str);
@@ -129,7 +131,7 @@ namespace esp_link
 
         bool sync();
         void send_padding(uint16_t length);
-        void send_hex( uint8_t value);
+        void send_hex( uint8_t value) const;
 
     private:
 
@@ -207,7 +209,7 @@ namespace esp_link
 
         uint32_t register_callback(callback_type f);
 
-        void send_direct(uint8_t value);
+        void send_direct(uint8_t value) const;
         void send_byte(uint8_t value);
         void send_bytes(const uint8_t* buffer, uint8_t size);
 
@@ -234,7 +236,7 @@ namespace esp_link
         const packet* check_packet(const uint8_t* buffer, uint8_t size);
 
         uint16_t        m_runningCrc = 0;
-        serial::uart<>  *m_uart;
+        uart_type  *m_uart;
         static constexpr uint8_t buffer_size = 128;
         uint8_t m_buffer[buffer_size];
         uint8_t m_buffer_index = 0;

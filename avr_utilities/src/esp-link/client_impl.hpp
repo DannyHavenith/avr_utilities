@@ -26,6 +26,22 @@ namespace
     constexpr uint8_t SLIP_ESC     = 0xDB;    /**< Escape */
     constexpr uint8_t SLIP_ESC_END = 0xDC;    /**< Escaped END */
     constexpr uint8_t SLIP_ESC_ESC = 0xDD;    /**< Escaped escape*/
+    constexpr uint8_t debug_buffer_size = 64;
+    uint8_t debug_buffer[debug_buffer_size] = {0};
+    uint8_t debug_buffer_index = 0;
+
+    void debug( uint8_t value)
+    {
+    	if (debug_buffer_index < debug_buffer_size)
+    	{
+    		debug_buffer[ debug_buffer_index++] = value;
+    	}
+    }
+
+    void debug_reset()
+    {
+    	debug_buffer_index = 0;
+    }
 }
 
 namespace esp_link
@@ -62,20 +78,10 @@ const packet* client::try_receive()
     while (m_uart->data_available())
     {
         uint8_t lastByte = m_uart->read();
-        if (lastByte == SLIP_ESC)
-        {
-            m_last_was_esc = true;
-            continue;
-        }
+        debug( lastByte);
 
-        if (lastByte == SLIP_END)
-        {
-            auto packet = decode_packet( m_buffer, m_buffer_index);
-            m_buffer_index = 0;
-            m_last_was_esc = false;
-            return packet;
-        }
 
+        // handle SLIP escape
         if (m_last_was_esc)
         {
             m_last_was_esc = false;
@@ -88,9 +94,24 @@ const packet* client::try_receive()
                 lastByte = SLIP_END;
             }
         }
-
-        if (m_buffer_index < buffer_size)
+        else if (lastByte == SLIP_ESC)
         {
+            m_last_was_esc = true;
+            continue;
+        }
+
+        // handle an (unescaped) SLIP END
+        if (lastByte == SLIP_END)
+        {
+            auto packet = decode_packet( m_buffer, m_buffer_index);
+            debug_reset();
+            m_buffer_index = 0;
+            m_last_was_esc = false;
+            return packet;
+        }
+        else if (m_buffer_index < buffer_size)
+        {
+        	// regular case, just add the byte to the buffer.
             m_buffer[m_buffer_index++] = lastByte;
         }
     }
@@ -192,6 +213,15 @@ void client::log_packet(const esp_link::packet *p)
     }
 }
 
+void client::log_packet( const uint8_t *buffer, uint8_t size) const
+{
+	while (size--)
+	{
+		send_hex( *buffer++);
+		send_direct(static_cast< uint8_t>(' '));
+	}
+}
+
 /**
  * Check a sequence of bytes for a correct checksum.
  */
@@ -203,6 +233,7 @@ const esp_link::packet* client::check_packet(
     if (size < 8) return nullptr;
 
     uint16_t crc = 0;
+    const uint8_t size_backup = size;
     const uint8_t *data = buffer;
 
     while (size-- > 2)
@@ -211,13 +242,26 @@ const esp_link::packet* client::check_packet(
     }
     if (*reinterpret_cast<const uint16_t*>( data) != crc)
     {
-        send("check failed\n");
+        send("F:\n");
+        log_packet( buffer, size_backup-2);
+        send(" C:");
+        log_packet( buffer + size_backup-2, 2);
+        send(" E:");
+        log_packet( reinterpret_cast<const uint8_t *>(&crc), 2);
+        send("\nD:");
+        log_packet( debug_buffer, debug_buffer_index);
+        send("\n");
+
         return nullptr;
     }
     else
     {
+        send("OK:\n");
+        log_packet( debug_buffer, debug_buffer_index);
+        send("\n");
         return reinterpret_cast<const packet*>( buffer);
     }
+    debug_reset();
 }
 
 /**
@@ -285,7 +329,7 @@ uint8_t client::receive_byte_w()
  * Send a byte value as a hex string.
  * Useful for debugging.
  */
-void client::send_hex( uint8_t value)
+void client::send_hex( uint8_t value) const
 {
     constexpr char digits[] = {
             '0', '1', '2', '3',
@@ -302,7 +346,7 @@ void client::send_hex( uint8_t value)
  * Send a byte directly to the uart, without SLIP
  * ESCAPEing.
  */
-void client::send_direct(uint8_t value)
+void client::send_direct(uint8_t value) const
 {
     //send_hex( value);
     m_uart->send( value);
