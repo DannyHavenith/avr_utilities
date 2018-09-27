@@ -72,8 +72,23 @@ public:
     /// send and receive one byte at the same time.
     static uint8_t transmit_receive( uint8_t transmit)
     {
-        uint8_t receive = exchange_byte( transmit);
-        return receive;
+        return exchange_byte( transmit);
+    }
+
+    static uint16_t transmit_receive( uint16_t transmit)
+    {
+    	return  static_cast<uint16_t>( exchange_byte(transmit >> 8)) << 8 |
+				static_cast<uint16_t>( exchange_byte( transmit & 0xff));
+
+
+    }
+
+    static int16_t transmit_receive( int16_t transmit)
+    {
+    	return  static_cast<uint16_t>( exchange_byte(transmit >> 8)) << 8 |
+				static_cast<uint16_t>( exchange_byte( transmit & 0xff));
+
+
     }
 
     /// send a buffer of bytes, replacing the contents with bytes received.
