@@ -77,7 +77,8 @@ public:
 
     static uint16_t transmit_receive( uint16_t transmit)
     {
-    	return  static_cast<uint16_t>( exchange_byte(transmit >> 8)) << 8 |
+    	uint8_t msb = exchange_byte(transmit >> 8);
+    	return  (static_cast<uint16_t>( msb) << 8) |
 				static_cast<uint16_t>( exchange_byte( transmit & 0xff));
 
 
@@ -85,7 +86,8 @@ public:
 
     static int16_t transmit_receive( int16_t transmit)
     {
-    	return  static_cast<uint16_t>( exchange_byte(transmit >> 8)) << 8 |
+    	uint8_t msb = exchange_byte(transmit >> 8);
+    	return  (static_cast<uint16_t>( msb) << 8) |
 				static_cast<uint16_t>( exchange_byte( transmit & 0xff));
 
 
