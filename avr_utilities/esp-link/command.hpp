@@ -7,7 +7,6 @@
 //
 #ifndef ESP_LINK_COMMAND_HPP_
 #define ESP_LINK_COMMAND_HPP_
-#include "command_codes.hpp"
 #include <stdint.h>
 
 /**
@@ -92,13 +91,13 @@ struct return_type<ack>
 namespace {
     constexpr
         command<
-            commands::CMD_SYNC,
+            1,
             ack()>
         sync;
 
     constexpr
         command<
-            commands::CMD_GET_TIME,
+            7,
             uint32_t()>
         get_time;
 }
@@ -108,19 +107,19 @@ namespace mqtt
 namespace {
     constexpr
         command<
-            commands::CMD_MQTT_SUBSCRIBE,
+            12,
             void ( string topic, uint8_t qos)>
         subscribe;
 
     constexpr
         command<
-            commands::CMD_MQTT_SETUP,
+            10,
             void ( callback connected, callback disconnected, callback published, callback data)>
         setup;
 
     constexpr
         command<
-            commands::CMD_MQTT_PUBLISH,
+            11,
             void ( string topic, string_with_extra_len message, uint8_t qos, bool retain)>
         publish;
     }
