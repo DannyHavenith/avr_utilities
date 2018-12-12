@@ -81,6 +81,8 @@ const packet* client::try_receive()
         debug( lastByte);
 
 
+        bool endDetected = false;
+
         // handle SLIP escape
         if (m_last_was_esc)
         {
@@ -99,9 +101,13 @@ const packet* client::try_receive()
             m_last_was_esc = true;
             continue;
         }
+        else if (lastByte == SLIP_END)
+        {
+            endDetected = true;
+        }
 
         // handle an (unescaped) SLIP END
-        if (lastByte == SLIP_END)
+        if ( endDetected)
         {
             auto packet = decode_packet( m_buffer, m_buffer_index);
             debug_reset();
