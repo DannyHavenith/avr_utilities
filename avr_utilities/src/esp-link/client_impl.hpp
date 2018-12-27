@@ -154,7 +154,7 @@ bool client::sync()
         execute( esp_link::sync);
         while ((p = receive()))
         {
-            if (p->cmd ==  commands::CMD_RESP_V)
+            if (p and p->cmd ==  commands::CMD_RESP_V)
             {
                 m_syncing = false;
                 return true;
