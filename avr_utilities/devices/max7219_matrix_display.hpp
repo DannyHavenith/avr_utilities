@@ -18,12 +18,19 @@ static const uint16_t scan_limit   = 0x0b00;
 static const uint16_t shutdown     = 0x0c00;
 static const uint16_t display_test = 0x0f00;
 
-/// This class represents an array of 8x8 led matrices driven by MAX7219 ICs.
-///
-/// This particular implementation assumes that the matrices have been wired to map rows to bytes, which is not the most efficient
-/// wiring for this particular implementation.
-/// The number of displays is the first template argument. The second argument is the spi device type used to communicate with
-/// the MAX7219s, finally a type must be given that represents the chip select pin.
+/**
+ *
+ * Represent an array of 8x8 led matrices driven by MAX7219 ICs.
+ *
+ * This implementation assumes that the matrices have been wired to map rows to bytes, which is not the most efficient
+ * wiring for this particular implementation. All data to be sent to the display is buffered internally and
+ * only transmitted when transmit() is called.
+ *
+ * The number of displays is the first template argument.
+ * The second argument is the spi device type used to communicate with the MAX7219s.
+ * Finally, a type must be given that represents the chip select pin.
+ *
+ */
 template< int display_count, typename spi_type, typename csk_type>
 class display_buffer
 {
@@ -36,12 +43,19 @@ public:
 		clear();
 	}
 
+	/**
+	 * clear the display buffer.
+	 */
 	void clear()
 	{
 		current_column = 0;
 		memset( buffer, 0, sizeof buffer);
 	}
 
+	/**
+	 * Transmit the contents of the display buffer to the MAX7219s to drive the
+	 * LED matrices.
+	 */
 	void transmit() const
 	{
 		for (uint8_t line = 0; line < 8; ++line)
@@ -56,6 +70,13 @@ public:
 		}
 	}
 
+	/**
+	 * Push a column of data to the display buffer, this will advance an internal
+	 * cursor to the next column automatically.
+	 *
+	 * If auto-shift is enabled, any column that is pushed beyond the rightmost
+	 * column will automatically shift the data in the display buffer to the left.
+	 */
 	void push_column( uint8_t value)
 	{
 		if (current_column >= 8 * display_count)
@@ -76,6 +97,9 @@ public:
 
 	}
 
+	/**
+	 * Shift the contents of the data buffer one column to the left.
+	 */
 	void shift_left()
 	{
 		for (int8_t row = 8; row>=0; --row)
@@ -93,6 +117,9 @@ public:
 		}
 	}
 
+	/**
+	 * Set- or reset auto-shift mode.
+	 */
 	void auto_shift( bool value)
 	{
 	    auto_shift_enabled = value;
@@ -100,6 +127,9 @@ public:
 
 private:
 
+	/**
+	 * send a SPI command to the chained MAX7219s
+	 */
 	static void send( uint16_t command, uint8_t count = display_count)
 	{
 		reset( csk);
