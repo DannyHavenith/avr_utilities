@@ -102,7 +102,7 @@ public:
 	 */
 	void shift_left()
 	{
-		for (int8_t row = 8; row>=0; --row)
+		for (int8_t row = 7; row>=0; --row)
 		{
 			uint8_t *end = (&buffer[row][0]) -1;
 			uint8_t *begin = (&buffer[row][display_count-1]);
