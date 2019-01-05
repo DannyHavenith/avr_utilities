@@ -98,6 +98,24 @@ public:
 	}
 
 	/**
+	 * Set a pixel in the display buffer.
+	 * (0,0) is the upper left hand side of the matrix.
+	 */
+	void set_pixel( uint8_t x, uint8_t y)
+	{
+        const uint8_t mask = 1 << (7 - (x % 8));
+        const uint8_t offset = x / 8;
+        buffer[y%8][offset] |= mask;
+	}
+
+    void flip_pixel( uint8_t x, uint8_t y)
+    {
+        const uint8_t mask = 1 << (7 - (x % 8));
+        const uint8_t offset = x / 8;
+        buffer[y%8][offset] ^= mask;
+    }
+
+	/**
 	 * Shift the contents of the data buffer one column to the left.
 	 */
 	void shift_left()
@@ -125,6 +143,16 @@ public:
 	    auto_shift_enabled = value;
 	}
 
+	void enable( bool en)
+	{
+	    send( shutdown | (en?1:0));
+	}
+
+	void brightness( uint8_t value)
+	{
+	    send( intensity | (value & 0x0f));
+	}
+
 private:
 
 	/**
@@ -150,9 +178,9 @@ private:
 	}
 
 	bool    auto_shift_enabled;
-	static csk_type csk;
 	uint8_t  current_column;
 	uint8_t  buffer[8][display_count];
+	static csk_type csk;
 };
 
 }
