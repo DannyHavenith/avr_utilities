@@ -35,6 +35,8 @@ template< int display_count, typename spi_type, typename csk_type>
 class display_buffer
 {
 public:
+    static constexpr uint16_t column_count = 8 * display_count;
+
 	display_buffer()
     :auto_shift_enabled(true)
 	{
