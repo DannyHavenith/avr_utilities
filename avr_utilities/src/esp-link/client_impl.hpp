@@ -26,22 +26,25 @@ namespace
     constexpr uint8_t SLIP_ESC     = 0xDB;    /**< Escape */
     constexpr uint8_t SLIP_ESC_END = 0xDC;    /**< Escaped END */
     constexpr uint8_t SLIP_ESC_ESC = 0xDD;    /**< Escaped escape*/
-    constexpr uint8_t debug_buffer_size = 64;
-    uint8_t debug_buffer[debug_buffer_size] = {0};
-    uint8_t debug_buffer_index = 0;
+//    constexpr uint8_t debug_buffer_size = 64;
+//    uint8_t debug_buffer[debug_buffer_size] = {0};
+//    uint8_t debug_buffer_index = 0;
 
-    void debug( uint8_t value)
-    {
-    	if (debug_buffer_index < debug_buffer_size)
-    	{
-    		debug_buffer[ debug_buffer_index++] = value;
-    	}
-    }
+//    void debug( uint8_t value)
+//    {
+//    	if (debug_buffer_index < debug_buffer_size)
+//    	{
+//    		debug_buffer[ debug_buffer_index++] = value;
+//    	}
+//    }
+//
+//    void debug_reset()
+//    {
+//    	debug_buffer_index = 0;
+//    }
 
-    void debug_reset()
-    {
-    	debug_buffer_index = 0;
-    }
+    inline void debug(uint8_t){};
+    inline void debug_reset(){};
 }
 
 namespace esp_link
@@ -239,7 +242,6 @@ const esp_link::packet* client::check_packet(
     if (size < 8) return nullptr;
 
     uint16_t crc = 0;
-    const uint8_t size_backup = size;
     const uint8_t *data = buffer;
 
     while (size-- > 2)
@@ -248,23 +250,10 @@ const esp_link::packet* client::check_packet(
     }
     if (*reinterpret_cast<const uint16_t*>( data) != crc)
     {
-        send("F:\n");
-        log_packet( buffer, size_backup-2);
-        send(" C:");
-        log_packet( buffer + size_backup-2, 2);
-        send(" E:");
-        log_packet( reinterpret_cast<const uint8_t *>(&crc), 2);
-        send("\nD:");
-        log_packet( debug_buffer, debug_buffer_index);
-        send("\n");
-
         return nullptr;
     }
     else
     {
-        send("OK:\n");
-        log_packet( debug_buffer, debug_buffer_index);
-        send("\n");
         return reinterpret_cast<const packet*>( buffer);
     }
     debug_reset();
