@@ -41,7 +41,7 @@ namespace esp_link {
  * constexpr command< 143, void (string)> example2;
  * @endcode
  *
- * Objects of these types can be used with the esp_lin::client::execute() member function
+ * Objects of these types can be used with the esp_link::client::execute() member function
  * template. This function template expects arguments that are comaptible with the given
  * argument types, so for instance the last example can be used as follows:
  *

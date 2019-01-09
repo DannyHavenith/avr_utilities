@@ -23,6 +23,9 @@ namespace flash_string
 }
 namespace esp_link
 {
+    /**
+     * in-memory representation of a packet as received from esp-link
+     */
     struct packet
     {
         uint16_t cmd;            /**< Command to execute */
@@ -31,12 +34,21 @@ namespace esp_link
         uint8_t  args[0];        /**< Arguments */
     };
 
+    /**
+     * Reference to a string in an esp-link packet.
+     */
     struct string_ref
     {
         const char *buffer;
         uint16_t len;
     };
 
+    /**
+     * This class extracts typed values out of an esp-link received packet.
+     *
+     * First construct a parser and then call the get() function to extract values one
+     * by one.
+     */
     struct packet_parser
     {
         packet_parser( const packet *p)
@@ -86,6 +98,14 @@ namespace esp_link
     };
 
 
+    /**
+     * Object that communicates with esp-link.
+     *
+     * This object takes a reference to a UART and will
+     * communicate over that device with an esp8266 with esp-link firmware.
+     *
+     * Interaction with esp-link is done mainly through the execute() function template.
+     */
     class client
     {
     public:
@@ -115,7 +135,12 @@ namespace esp_link
 
             constexpr uint16_t argc = send_parameter_count( tag<Parameters>{}...);
             send_request_header( Cmd, 0x142, argc);
+
+            // non-recursive fold-expression alternative to call add_parameter() for each parameter in args. So if Arguments &... args actually
+            // consists of Arg1 arg1, Arg2 arg2, etc and Parameters... represents Parameter1, Parameter2, etc, then this will evaluate to
+            // add_parameter( tag<Parameter1>{}, arg1), add_parameter( tag<Parameter2>{}, arg2), etc.
             (void)((int[]){0, (add_parameter(tag<Parameters>{}, args),0)...});
+
             finalize_request();
         }
 
@@ -154,6 +179,7 @@ namespace esp_link
             return 2;
         }
 
+        // calculate the number of parameter to send for a given argument list.
         template< typename Head, typename... Tail>
         static constexpr uint16_t send_parameter_count( tag<Head> head, Tail... tail)
         {
